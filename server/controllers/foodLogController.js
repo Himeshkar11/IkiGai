@@ -137,20 +137,42 @@ const computeSnapshot = (food, quantity) => {
   };
 };
 
+// Build a snapshot for a raw natural-language description (no Food master
+// record). Nutrition is 0 until the future AI-parsing phase fills it in —
+// this is an explicit placeholder, not fabricated data.
+const computeDescriptionSnapshot = (description, quantity) => {
+  const q = Number(quantity) || 1;
+  return {
+    description: String(description).trim(),
+    quantity: q,
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    fiber: 0,
+  };
+};
+
 // POST /api/food-logs/:date/meals/:meal/items
 const addItemToMeal = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const { date } = req.params; // YYYY-MM-DD
     const { meal } = req.params;
-    const { foodId, quantity } = req.body;
+    const { foodId, description, quantity } = req.body;
 
     if (!mealNames.includes(meal)) return res.status(400).json({ success: false, message: 'Invalid meal name' });
 
-    const food = await Food.findOne({ _id: foodId, userId });
-    if (!food) return res.status(404).json({ success: false, message: 'Food not found' });
-
-    const snapshot = computeSnapshot(food, quantity);
+    let snapshot;
+    if (foodId) {
+      const food = await Food.findOne({ _id: foodId, userId });
+      if (!food) return res.status(404).json({ success: false, message: 'Food not found' });
+      snapshot = computeSnapshot(food, quantity);
+    } else if (description && String(description).trim()) {
+      snapshot = computeDescriptionSnapshot(description, quantity);
+    } else {
+      return res.status(400).json({ success: false, message: 'Either foodId or description is required' });
+    }
 
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);

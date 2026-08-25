@@ -75,7 +75,7 @@ const FoodEntryRow = ({
     <div className="food-entry-main">
       <span className="food-entry-icon" aria-hidden>{icon}</span>
       <div className="food-entry-body">
-        <div className="food-entry-name">{item.name || 'Food'}</div>
+        <div className="food-entry-name">{item.description || item.name || 'Food'}</div>
         {editing ? (
           <div className="food-entry-edit">
             <span className="muted">Servings</span>
@@ -168,20 +168,12 @@ const FoodPage = () => {
     setSubmitting(true);
     setError(null);
     try {
-      // No AI parsing yet: store the raw description as the food's name with
-      // zero macros. A later AI step can populate real nutrition before this
-      // create call, without changing how items get logged to the meal.
-      const created = await foodService.createFood({
-        name: description,
-        servingSize: 1,
-        servingUnit: 'serving',
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0,
-        fiber: 0,
-      });
-      const updated = await foodService.addItemToMeal(selectedDate, formMeal, { foodId: created._id, quantity: 1 });
+      // No AI parsing yet: log the raw description directly on the FoodLog
+      // meal item (description field), with zero macros as an explicit
+      // placeholder. A later AI step can populate real nutrition before this
+      // call, without changing how items get logged to the meal. This does
+      // NOT create a Food master record — "4 idly" isn't a reusable food.
+      const updated = await foodService.addItemToMeal(selectedDate, formMeal, { description, quantity: 1 });
       setFoodLog(updated);
       closeForm();
     } catch (e) {

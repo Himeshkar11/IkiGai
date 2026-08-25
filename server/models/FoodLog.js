@@ -5,6 +5,14 @@ const foodItemSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Food',
   },
+  // Raw natural-language description (e.g. "4 idly"), used for entries logged
+  // before AI parsing exists. Optional: items created from an existing Food
+  // master (via foodId) don't need it. Nutrition for description-only items
+  // is 0 until the future AI phase fills it in.
+  description: {
+    type: String,
+    trim: true,
+  },
   quantity: {
     type: Number,
     required: true,
