@@ -21,39 +21,181 @@ const statFields = [
 const isoDate = (d) => new Date(d).toISOString().slice(0, 10);
 
 const EmptyTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+const calculateFoodTotals = (foodLog) => {
+  const totals = {
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    fiber: 0,
+  };
+
+  if (!foodLog?.meals) {
+    return totals;
+  }
+
+  Object.values(foodLog.meals).forEach((mealItems) => {
+    if (!Array.isArray(mealItems)) {
+      return;
+    }
+
+    mealItems.forEach((item) => {
+      totals.calories += Number(item.calories) || 0;
+      totals.protein += Number(item.protein) || 0;
+      totals.carbs += Number(item.carbs) || 0;
+      totals.fat += Number(item.fat) || 0;
+      totals.fiber += Number(item.fiber) || 0;
+    });
+  });
+
+  return totals;
+};
 
 // ---- Inline "Add Food" form. Defined at module scope so its identity is
 // stable across FoodPage re-renders (keeps focus in the textarea/select). ----
-const AddFoodForm = ({ meal, onMealChange, description, onDescriptionChange, onCancel, onSubmit, submitting }) => (
+const AddFoodForm = ({
+  meal,
+  onMealChange,
+  description,
+  onDescriptionChange,
+  onCancel,
+  onSubmit,
+  submitting,
+  aiAnalyzing,
+  aiPreview,
+  onConfirmAI,
+  onCancelAI,
+}) => (
   <form className="add-food-form" onSubmit={onSubmit}>
     <h3>Add Food</h3>
 
     <label className="field">
       <span className="field-label">Meal</span>
-      <select value={meal} onChange={(e) => onMealChange(e.target.value)}>
+
+      <select
+        value={meal}
+        onChange={(e) => onMealChange(e.target.value)}
+        disabled={aiAnalyzing || submitting}
+      >
         {meals.map((m) => (
-          <option key={m.key} value={m.key}>{m.label}</option>
+          <option key={m.key} value={m.key}>
+            {m.label}
+          </option>
         ))}
       </select>
     </label>
 
-    <label className="field">
-      <span className="field-label">What did you eat?</span>
-      <textarea
-        rows={2}
-        placeholder="e.g. 2 eggs, 200g rice and 150g chicken"
-        value={description}
-        onChange={(e) => onDescriptionChange(e.target.value)}
-        autoFocus
-      />
-    </label>
+    {!aiPreview ? (
+      <>
+        <label className="field">
+          <span className="field-label">What did you eat?</span>
 
-    <div className="form-actions">
-      <button type="button" className="link" onClick={onCancel} disabled={submitting}>Cancel</button>
-      <button type="submit" className="btn primary" disabled={submitting || !description.trim()}>
-        {submitting ? 'Adding…' : 'Add Food'}
-      </button>
-    </div>
+          <textarea
+            rows={2}
+            placeholder="e.g. 2 eggs, 200g rice and 150g chicken"
+            value={description}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+            autoFocus
+            disabled={aiAnalyzing}
+          />
+        </label>
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="link"
+            onClick={onCancel}
+            disabled={aiAnalyzing}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            className="btn primary"
+            disabled={aiAnalyzing || !description.trim()}
+          >
+            {aiAnalyzing ? 'Analyzing…' : 'Analyze Food'}
+          </button>
+        </div>
+      </>
+    ) : (
+      <div className="ai-food-preview">
+        <h4>Food detected</h4>
+
+        {aiPreview.items?.length > 0 ? (
+          <div className="ai-food-items">
+            {aiPreview.items.map((item, index) => (
+              <div
+                className="ai-food-item"
+                key={`${item.foodId}-${index}`}
+              >
+                <div>
+                  <strong>{item.name}</strong>
+
+                  <div className="muted">
+                    {item.quantity} {item.unit}
+                  </div>
+                </div>
+
+                <div className="ai-food-nutrition">
+                  {Math.round(item.nutrition.calories)} kcal
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">
+            No foods could be matched to your food database.
+          </p>
+        )}
+
+        {aiPreview.unmatched?.length > 0 && (
+          <div className="ai-unmatched">
+            <h4>Could not match</h4>
+
+            {aiPreview.unmatched.map((item, index) => (
+              <div key={index}>
+                {item.name} — {item.quantity} {item.unit}
+
+                {item.reason && (
+                  <div className="muted">
+                    {item.reason}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <p className="muted">
+              Create or select these foods before adding them.
+            </p>
+          </div>
+        )}
+
+        <div className="form-actions">
+          <button
+            type="button"
+            className="link"
+            onClick={onCancelAI}
+            disabled={submitting}
+          >
+            Back
+          </button>
+
+          <button
+            type="button"
+            className="btn primary"
+            onClick={onConfirmAI}
+            disabled={
+              submitting ||
+              !aiPreview.items?.length
+            }
+          >
+            {submitting ? 'Adding…' : 'Confirm & Add'}
+          </button>
+        </div>
+      </div>
+    )}
   </form>
 );
 
@@ -123,6 +265,8 @@ const FoodPage = () => {
   const [formMeal, setFormMeal] = useState('breakfast');
   const [formDescription, setFormDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiPreview, setAiPreview] = useState(null);
 
   // Per-entry overflow menu / inline quantity edit.
   const [openMenuItemId, setOpenMenuItemId] = useState(null);
@@ -156,32 +300,87 @@ const FoodPage = () => {
     setOpenMenuItemId(null);
   };
 
-  const closeForm = () => {
-    setFormOpenFor(null);
-    setFormDescription('');
-  };
+const closeForm = () => {
+  setFormOpenFor(null);
+  setFormDescription('');
+  setAiPreview(null);
+};
 
-  const handleSubmitAdd = async (e) => {
-    e.preventDefault();
-    const description = formDescription.trim();
-    if (!description) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      // No AI parsing yet: log the raw description directly on the FoodLog
-      // meal item (description field), with zero macros as an explicit
-      // placeholder. A later AI step can populate real nutrition before this
-      // call, without changing how items get logged to the meal. This does
-      // NOT create a Food master record — "4 idly" isn't a reusable food.
-      const updated = await foodService.addItemToMeal(selectedDate, formMeal, { description, quantity: 1 });
-      setFoodLog(updated);
-      closeForm();
-    } catch (e) {
-      setError('Failed to add food');
-    } finally {
-      setSubmitting(false);
+const handleSubmitAdd = async (e) => {
+  e.preventDefault();
+
+  const description = formDescription.trim();
+
+  if (!description) return;
+
+  setAiAnalyzing(true);
+  setError(null);
+
+  try {
+    const result = await foodService.analyzeFood(description);
+
+    setAiPreview(result);
+  } catch (e) {
+    console.error('AI food analysis failed:', e);
+
+    setError(
+      e.response?.data?.message || 'Failed to analyze food'
+    );
+  } finally {
+    setAiAnalyzing(false);
+  }
+};
+const handleConfirmAI = async () => {
+  if (!aiPreview?.items?.length) {
+    return;
+  }
+
+  setSubmitting(true);
+  setError(null);
+
+  try {
+    let updatedLog = foodLog;
+
+    for (const item of aiPreview.items) {
+      const payload = {
+        description: item.name,
+        quantity: item.quantity,
+        calories: item.nutrition.calories,
+        protein: item.nutrition.protein,
+        carbs: item.nutrition.carbs,
+        fat: item.nutrition.fat,
+        fiber: item.nutrition.fiber,
+      };
+
+      console.log('Adding AI food:', payload);
+
+      updatedLog = await foodService.addItemToMeal(
+        selectedDate,
+        formMeal,
+        payload
+      );
     }
-  };
+
+    setFoodLog(updatedLog);
+
+    setAiPreview(null);
+    setFormDescription('');
+    closeForm();
+
+  } catch (e) {
+    console.error('Failed to save AI foods:', e);
+
+    setError(
+      e.response?.data?.message ||
+      'Failed to add analyzed food'
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
+const handleCancelAI = () => {
+  setAiPreview(null);
+};
 
   const handleDelete = async (item, meal) => {
     if (!foodLog?._id) return;
@@ -218,25 +417,28 @@ const FoodPage = () => {
     setSelectedDate(isoDate(d));
   };
 
-  const totals = (foodLog && foodLog.totals) || EmptyTotals;
+  const totals = calculateFoodTotals(foodLog);
   const displayDate = new Date(selectedDate).toLocaleDateString(undefined, {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
 
-  const renderForm = (mealKey) => (
-    <AddFoodForm
-      meal={formMeal}
-      onMealChange={setFormMeal}
-      description={formDescription}
-      onDescriptionChange={setFormDescription}
-      onCancel={closeForm}
-      onSubmit={handleSubmitAdd}
-      submitting={submitting}
-    />
-  );
-
+const renderForm = (mealKey) => (
+  <AddFoodForm
+    meal={formMeal}
+    onMealChange={setFormMeal}
+    description={formDescription}
+    onDescriptionChange={setFormDescription}
+    onCancel={closeForm}
+    onSubmit={handleSubmitAdd}
+    submitting={submitting}
+    aiAnalyzing={aiAnalyzing}
+    aiPreview={aiPreview}
+    onConfirmAI={handleConfirmAI}
+    onCancelAI={handleCancelAI}
+  />
+);
   return (
     <div className="page-card food-page">
       <p className="eyebrow">Nutrition</p>

@@ -154,48 +154,129 @@ const computeDescriptionSnapshot = (description, quantity) => {
 };
 
 // POST /api/food-logs/:date/meals/:meal/items
+// POST /api/food-logs/:date/meals/:meal/items
 const addItemToMeal = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const { date } = req.params; // YYYY-MM-DD
+    const { date } = req.params;
     const { meal } = req.params;
-    const { foodId, description, quantity } = req.body;
 
-    if (!mealNames.includes(meal)) return res.status(400).json({ success: false, message: 'Invalid meal name' });
+    // AI nutrition values are accepted here
+    const {
+      foodId,
+      description,
+      quantity,
+      calories,
+      protein,
+      carbs,
+      fat,
+      fiber,
+    } = req.body;
+
+    if (!mealNames.includes(meal)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid meal name',
+      });
+    }
 
     let snapshot;
+
+    // -----------------------------------
+    // Existing Food database entry
+    // -----------------------------------
     if (foodId) {
-      const food = await Food.findOne({ _id: foodId, userId });
-      if (!food) return res.status(404).json({ success: false, message: 'Food not found' });
+      const food = await Food.findOne({
+        _id: foodId,
+        userId,
+      });
+
+      if (!food) {
+        return res.status(404).json({
+          success: false,
+          message: 'Food not found',
+        });
+      }
+
       snapshot = computeSnapshot(food, quantity);
+
+    // -----------------------------------
+    // AI-generated food entry
+    // -----------------------------------
     } else if (description && String(description).trim()) {
-      snapshot = computeDescriptionSnapshot(description, quantity);
+      snapshot = {
+        description: String(description).trim(),
+        quantity: Number(quantity) || 1,
+
+        // Nutrition supplied by AI
+        calories: Number(calories) || 0,
+        protein: Number(protein) || 0,
+        carbs: Number(carbs) || 0,
+        fat: Number(fat) || 0,
+        fiber: Number(fiber) || 0,
+      };
+
     } else {
-      return res.status(400).json({ success: false, message: 'Either foodId or description is required' });
+      return res.status(400).json({
+        success: false,
+        message: 'Either foodId or description is required',
+      });
     }
 
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
 
     const update = { $push: {} };
+
     update.$push[`meals.${meal}`] = snapshot;
 
-    let log = await FoodLog.findOneAndUpdate({ userId, date: d }, update, { new: true });
+    let log = await FoodLog.findOneAndUpdate(
+      { userId, date: d },
+      update,
+      { new: true }
+    );
+
+    // -----------------------------------
+    // Create new daily food log
+    // -----------------------------------
     if (!log) {
       const meals = {};
-      mealNames.forEach((m) => (meals[m] = []));
+
+      mealNames.forEach((m) => {
+        meals[m] = [];
+      });
+
       meals[meal] = [snapshot];
+
       const totals = recalcTotals(meals);
-      log = await FoodLog.create({ userId, date: d, meals, totals });
-      return res.status(201).json({ success: true, foodLog: log });
+
+      log = await FoodLog.create({
+        userId,
+        date: d,
+        meals,
+        totals,
+      });
+
+      return res.status(201).json({
+        success: true,
+        foodLog: log,
+      });
     }
 
-    // Recalculate totals
+    // -----------------------------------
+    // Recalculate daily totals
+    // -----------------------------------
     const totals = recalcTotals(log.meals);
+
     log.totals = totals;
+
     await log.save();
 
-    res.status(200).json({ success: true, foodLog: log });
+    res.status(200).json({
+      success: true,
+      foodLog: log,
+    });
+
   } catch (error) {
     next(error);
   }

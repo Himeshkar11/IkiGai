@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+
+dotenv.config();
 const { connectDB } = require('./config/db');
 const { errorHandler } = require('./middleware/errorHandler');
 
@@ -12,8 +14,7 @@ const foodRoutes = require('./routes/foodRoutes');
 const foodLogRoutes = require('./routes/foodLogRoutes');
 const roomRoutes = require('./routes/roomRoutes');
 const moneyRoutes = require('./routes/moneyRoutes');
-
-dotenv.config();
+const aiRoutes = require('./routes/aiRoutes');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/foods', foodRoutes);
 app.use('/api/food-logs', foodLogRoutes);
 app.use('/api/room', roomRoutes);
 app.use('/api/money', moneyRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 404 handler
 app.use((req, res) => {
