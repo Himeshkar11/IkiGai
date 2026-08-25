@@ -2,10 +2,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
-  { to: '/', label: 'Home' },
-  { to: '/food', label: 'Food' },
-  { to: '/room', label: 'Room' },
-  { to: '/money', label: 'Money' },
+  { to: '/', label: 'Home', icon: '⌂' },
+  { to: '/food', label: 'Food', icon: '🍎' },
+  { to: '/room', label: 'Room', icon: '🏠' },
+  { to: '/money', label: 'Money', icon: '₹' },
 ];
 
 const Sidebar = () => {
@@ -19,11 +19,11 @@ const Sidebar = () => {
 
   return (
     <aside className="sidebar">
-      <div className="brand-block">
+      <div className="brand-block compact">
         <div className="brand-mark">I</div>
-        <div>
+        <div className="brand-meta">
           <p className="brand-name">IkiGai</p>
-          <small>Life OS</small>
+          <small className="brand-sub">Life OS</small>
         </div>
       </div>
 
@@ -37,45 +37,23 @@ const Sidebar = () => {
               isActive ? 'nav-item active' : 'nav-item'
             }
           >
-            {item.label}
+            <span className="nav-icon" aria-hidden>
+              {item.icon}
+            </span>
+            <span className="nav-label">{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div style={styles.userSection}>
-        {user && <p style={styles.userName}>👤 {user.name}</p>}
-        <button onClick={handleLogout} style={styles.logoutButton}>
-          Logout
-        </button>
+      <div className="sidebar-footer">
+        {user && <div className="user-row"> <span className="user-emoji">👤</span> <span className="user-name">{user.name}</span> </div>}
+        <div className="footer-actions">
+          <button className="icon-btn" title="Settings">⚙️</button>
+          <button className="ghost-btn" onClick={handleLogout}>Logout</button>
+        </div>
       </div>
     </aside>
   );
-};
-
-const styles = {
-  userSection: {
-    padding: '20px',
-    borderTop: '1px solid #eee',
-    marginTop: 'auto',
-  },
-  userName: {
-    fontSize: '12px',
-    color: '#666',
-    margin: '0 0 12px 0',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  },
-  logoutButton: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#dc3545',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: '500',
-  },
 };
 
 export default Sidebar;

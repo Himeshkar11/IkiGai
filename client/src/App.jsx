@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'r
 import Layout from './components/Layout';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DateProvider } from './context/DateContext';
 import useHealthCheck from './hooks/useHealthCheck';
 import FoodPage from './pages/FoodPage';
 import HomePage from './pages/HomePage';
@@ -99,15 +100,16 @@ const AppShell = () => {
   return (
     <Layout>
       <header className="topbar">
-        <div>
-          <p className="eyebrow">System status</p>
-          <h2>IkiGai</h2>
+        <div className="topbar-left">
+          {/* Intentionally minimal to keep app personal; brand is in sidebar */}
         </div>
-
-        <div
-          className={`status-pill ${healthStatus?.status === 'ok' ? 'online' : 'offline'}`}
-        >
-          {statusText}
+        <div className="topbar-right">
+          <div
+            className={`status-pill ${healthStatus?.status === 'ok' ? 'online' : 'offline'}`}
+            title={statusText}
+          >
+            {healthStatus?.status === 'ok' ? 'API • OK' : 'API • Issue'}
+          </div>
         </div>
       </header>
 
@@ -165,7 +167,9 @@ function App() {
     <Router>
       <AuthProvider>
         <AppProvider>
-          <AppShell />
+          <DateProvider>
+            <AppShell />
+          </DateProvider>
         </AppProvider>
       </AuthProvider>
     </Router>
