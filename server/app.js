@@ -3,7 +3,15 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { connectDB } = require('./config/db');
 const { errorHandler } = require('./middleware/errorHandler');
+
+// Routes
 const healthRoutes = require('./routes/healthRoutes');
+const authRoutes = require('./routes/authRoutes');
+const todoRoutes = require('./routes/todoRoutes');
+const foodRoutes = require('./routes/foodRoutes');
+const foodLogRoutes = require('./routes/foodLogRoutes');
+const roomRoutes = require('./routes/roomRoutes');
+const moneyRoutes = require('./routes/moneyRoutes');
 
 dotenv.config();
 
@@ -26,8 +34,23 @@ app.get('/', (req, res) => {
   });
 });
 
+// API Routes
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/todos', todoRoutes);
+app.use('/api/foods', foodRoutes);
+app.use('/api/food-logs', foodLogRoutes);
+app.use('/api/room', roomRoutes);
+app.use('/api/money', moneyRoutes);
 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    message: `Route ${req.path} not found`,
+  });
+});
+
+// Centralized error handler (must be last)
 app.use(errorHandler);
 
 module.exports = app;

@@ -1,19 +1,95 @@
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import { AppProvider, useAppContext } from './context/AppContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import useHealthCheck from './hooks/useHealthCheck';
 import FoodPage from './pages/FoodPage';
 import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import MoneyPage from './pages/MoneyPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RoomPage from './pages/RoomPage';
 import { formatStatus } from './utils/format';
 import './App.css';
 
+// Protected Route component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return children;
+};
+
+// Redirect authenticated users away from auth pages
+const AuthRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
 const AppShell = () => {
   const { healthStatus } = useAppContext();
+  const { isAuthenticated, loading } = useAuth();
 
   useHealthCheck();
+
+  // Don't show main layout for login/register
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <AuthRoute>
+              <LoginPage />
+            </AuthRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <AuthRoute>
+              <RegisterPage />
+            </AuthRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
 
   const statusText =
     healthStatus?.status === 'ok'
@@ -36,10 +112,47 @@ const AppShell = () => {
       </header>
 
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/food" element={<FoodPage />} />
-        <Route path="/room" element={<RoomPage />} />
-        <Route path="/money" element={<MoneyPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        {/* alias for legacy or external redirects that expect /home */}
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/food"
+          element={
+            <ProtectedRoute>
+              <FoodPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/room"
+          element={
+            <ProtectedRoute>
+              <RoomPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/money"
+          element={
+            <ProtectedRoute>
+              <MoneyPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/not-found" element={<NotFoundPage />} />
         <Route path="*" element={<Navigate to="/not-found" replace />} />
       </Routes>
@@ -49,11 +162,13 @@ const AppShell = () => {
 
 function App() {
   return (
-    <AppProvider>
-      <Router>
-        <AppShell />
-      </Router>
-    </AppProvider>
+    <Router>
+      <AuthProvider>
+        <AppProvider>
+          <AppShell />
+        </AppProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
