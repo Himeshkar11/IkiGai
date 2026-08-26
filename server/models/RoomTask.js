@@ -20,15 +20,21 @@ const roomTaskSchema = new mongoose.Schema(
     dueDate: {
       type: Date,
     },
-    completed: {
-      type: Boolean,
-      default: false,
-    },
-    recurring: {
-      type: String,
-      enum: ['none', 'daily', 'weekly', 'monthly'],
-      default: 'none',
-    },
+completed: {
+  type: Boolean,
+  default: false,
+},
+
+completedDates: {
+  type: [String],
+  default: [],
+},
+
+recurring: {
+  type: String,
+  enum: ['none', 'daily', 'weekly', 'monthly'],
+  default: 'none',
+},
     createdAt: {
       type: Date,
       default: Date.now,

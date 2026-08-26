@@ -12,9 +12,10 @@ const authRoutes = require('./routes/authRoutes');
 const todoRoutes = require('./routes/todoRoutes');
 const foodRoutes = require('./routes/foodRoutes');
 const foodLogRoutes = require('./routes/foodLogRoutes');
-const roomRoutes = require('./routes/roomRoutes');
+const roomRoutes = require('./routes/room');
 const moneyRoutes = require('./routes/moneyRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+
 
 const app = express();
 
