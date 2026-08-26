@@ -3,7 +3,6 @@ import Layout from './components/Layout';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DateProvider } from './context/DateContext';
-import { ThemeProvider } from './context/ThemeContext';
 import useHealthCheck from './hooks/useHealthCheck';
 import FoodPage from './pages/FoodPage';
 import HomePage from './pages/HomePage';
@@ -164,9 +163,7 @@ function App() {
       <AuthProvider>
         <AppProvider>
           <DateProvider>
-            <ThemeProvider>
-              <AppShell />
-            </ThemeProvider>
+            <AppShell />
           </DateProvider>
         </AppProvider>
       </AuthProvider>

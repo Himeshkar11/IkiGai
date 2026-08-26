@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 
 const navItems = [
   { to: '/', label: 'Home', icon: '⌂' },
@@ -12,7 +11,6 @@ const navItems = [
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -50,7 +48,7 @@ const Sidebar = () => {
       <div className="sidebar-footer">
         {user && <div className="user-row"> <span className="user-emoji">👤</span> <span className="user-name">{user.name}</span> </div>}
         <div className="footer-actions">
-          <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`} aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}><span className="theme-toggle-icon">{theme === 'dark' ? '☀️' : '🌙'}</span><span>{theme === 'dark' ? 'Light' : 'Dark'}</span></button>
+          <button className="icon-btn" title="Settings">⚙️</button>
           <button className="ghost-btn" onClick={handleLogout}>Logout</button>
         </div>
       </div>
