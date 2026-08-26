@@ -535,10 +535,118 @@
   color: #ef4444;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Money page                                                             */
+/* ---------------------------------------------------------------------- */
+
+.money-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.money-page .date-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.money-month-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.money-month-total strong {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.money-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.money-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.money-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.money-form .field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.money-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+}
+
+.money-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.money-desc {
+  font-weight: 600;
+}
+
+.money-amt {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.money-amount-input {
+  width: 110px;
+}
+
+.money-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
 @media (max-width: 640px) {
-  .food-page .date-nav {
+  .food-page .date-nav,
+  .money-page .date-nav {
     gap: 8px;
     flex-wrap: wrap;
+  }
+
+  .money-layout {
+    grid-template-columns: 1fr;
   }
 
   .nutrition-stats {
