@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useDate } from "../context/DateContext";
 
 function RoomPage() {
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const { selectedDate, setSelectedDate } = useDate();
 
   const [roomStatus, setRoomStatus] = useState({
     waterAvailable: null,
@@ -21,6 +20,10 @@ function RoomPage() {
     dueDate: selectedDate,
     recurring: "none",
   });
+
+  useEffect(() => {
+    setNewTask((prev) => ({ ...prev, dueDate: selectedDate }));
+  }, [selectedDate]);
 
   // Get room status whenever selected date changes
   useEffect(() => {

@@ -162,6 +162,51 @@
 .link.danger { color:#ef4444; }
 
 .empty-state { text-align:center; padding:28px; border-radius:10px; border:1px dashed rgba(15,23,42,0.04); }
+.empty-state.compact { padding: 16px; }
+.empty-state p { margin: 6px 0 0; }
+
+.home-modules {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.home-module { padding: 14px; }
+.home-module h4 { margin: 0; }
+.home-module-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.home-nutrition {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.home-nutrition div,
+.home-status-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+.home-nutrition span,
+.home-status-list span { color: var(--muted); }
+
+.home-status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .home-modules { grid-template-columns: 1fr; }
+}
 
 .calendar-card { padding:14px; }
 .calendar-header { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
