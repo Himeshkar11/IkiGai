@@ -54,18 +54,18 @@ const HomePage = () => {
   const moneyCount = money.transactions.length;
 
   return (
-    <div className="page-card">
-      <div className="page-head">
+    <div className="page-card home-page">
+      <div className="page-head home-hero">
         <div>
           <h1>{greet}{user?.name ? `, ${user.name} ` : ' '}👋</h1>
-          <div className="muted">{displayDate}</div>
-          <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          <div className="home-hero-date">{displayDate}</div>
+          <p className="home-hero-copy">
             {isToday ? "Let's make today count." : 'Viewing this day across every module.'}
-          </div>
+          </p>
         </div>
       </div>
 
-      <div style={{ height: 18 }} />
+      
 
       <div className="overview-cards">
         <div className="overview-card" onClick={() => navigate('/')}>
@@ -106,7 +106,7 @@ const HomePage = () => {
         </div>
       </div>
 
-      <div style={{ height: 20 }} />
+      
 
       <div className="home-grid">
         <div className="main-col">

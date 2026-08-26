@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DateProvider } from './context/DateContext';
+import { ThemeProvider } from './context/ThemeContext';
 import useHealthCheck from './hooks/useHealthCheck';
 import FoodPage from './pages/FoodPage';
 import HomePage from './pages/HomePage';
@@ -21,9 +22,7 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <p>Loading...</p>
-      </div>
+      <div className="loading-screen"><div className="loading-spinner" /><p>Loading Life OS…</p></div>
     );
   }
 
@@ -40,9 +39,7 @@ const AuthRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <p>Loading...</p>
-      </div>
+      <div className="loading-screen"><div className="loading-spinner" /><p>Loading Life OS…</p></div>
     );
   }
 
@@ -54,6 +51,7 @@ const AuthRoute = ({ children }) => {
 };
 
 const AppShell = () => {
+  const location = useLocation();
   const { healthStatus } = useAppContext();
   const { isAuthenticated, loading } = useAuth();
 
@@ -62,9 +60,7 @@ const AppShell = () => {
   // Don't show main layout for login/register
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <p>Loading...</p>
-      </div>
+      <div className="loading-screen"><div className="loading-spinner" /><p>Loading Life OS…</p></div>
     );
   }
 
@@ -101,7 +97,7 @@ const AppShell = () => {
     <Layout>
       <header className="topbar">
         <div className="topbar-left">
-          {/* Intentionally minimal to keep app personal; brand is in sidebar */}
+          <p className="topbar-title">{location.pathname === '/' || location.pathname === '/home' ? 'Today' : location.pathname.slice(1).replace(/-/g, ' ')}</p>
         </div>
         <div className="topbar-right">
           <div
@@ -168,7 +164,9 @@ function App() {
       <AuthProvider>
         <AppProvider>
           <DateProvider>
-            <AppShell />
+            <ThemeProvider>
+              <AppShell />
+            </ThemeProvider>
           </DateProvider>
         </AppProvider>
       </AuthProvider>

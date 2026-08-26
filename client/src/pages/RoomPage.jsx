@@ -237,310 +237,114 @@ function RoomPage() {
     Number(roomStatus.clothesReady !== null);
 
   return (
-    <div>
-      <h1>Room</h1>
-
-      {/* Date */}
-      <input
-        type="date"
-        value={selectedDate}
-        onChange={(e) => setSelectedDate(e.target.value)}
-      />
-
-      <h2>Room Status</h2>
-
-      {/* Water */}
-      <div>
-        <p>Is water available?</p>
-
-        <button
-          onClick={() =>
-            setRoomStatus({
-              ...roomStatus,
-              waterAvailable: true,
-            })
-          }
-        >
-          Yes
-        </button>
-
-        <button
-          onClick={() =>
-            setRoomStatus({
-              ...roomStatus,
-              waterAvailable: false,
-            })
-          }
-        >
-          No
-        </button>
-      </div>
-
-      {/* Room Clean */}
-      <div>
-        <p>Is the room clean?</p>
-
-        <button
-          onClick={() =>
-            setRoomStatus({
-              ...roomStatus,
-              roomClean: true,
-            })
-          }
-        >
-          Yes
-        </button>
-
-        <button
-          onClick={() =>
-            setRoomStatus({
-              ...roomStatus,
-              roomClean: false,
-            })
-          }
-        >
-          No
-        </button>
-      </div>
-
-      {/* Clothes */}
-      <div>
-        <p>Are clothes ready?</p>
-
-        <button
-          onClick={() =>
-            setRoomStatus({
-              ...roomStatus,
-              clothesReady: true,
-            })
-          }
-        >
-          Yes
-        </button>
-
-        <button
-          onClick={() =>
-            setRoomStatus({
-              ...roomStatus,
-              clothesReady: false,
-            })
-          }
-        >
-          No
-        </button>
-      </div>
-
-      {/* Save */}
-      <button onClick={saveRoomStatus}>Save</button>
-
-      {/* Completion */}
-      <h3>{completed}/3 completed</h3>
-
-      {/* Status display */}
-      <h2>Room Status</h2>
-
-      <p>
-        Water:{" "}
-        {roomStatus.waterAvailable === true
-          ? "✓"
-          : roomStatus.waterAvailable === false
-            ? "✗"
-            : "-"}
-      </p>
-
-      <p>
-        Room Clean:{" "}
-        {roomStatus.roomClean === true
-          ? "✓"
-          : roomStatus.roomClean === false
-            ? "✗"
-            : "-"}
-      </p>
-
-      <p>
-        Clothes:{" "}
-        {roomStatus.clothesReady === true
-          ? "✓"
-          : roomStatus.clothesReady === false
-            ? "✗"
-            : "-"}
-      </p>
-
-      {/* Add Room Task */}
-      <h2>Add Room Task</h2>
-
-      <div>
-        <input
-          type="text"
-          placeholder="Task title"
-          value={newTask.title}
-          onChange={(e) =>
-            setNewTask({
-              ...newTask,
-              title: e.target.value,
-            })
-          }
-        />
-
-        <input
-          type="text"
-          placeholder="Description"
-          value={newTask.description}
-          onChange={(e) =>
-            setNewTask({
-              ...newTask,
-              description: e.target.value,
-            })
-          }
-        />
-
-        <input
-          type="date"
-          value={newTask.dueDate}
-          onChange={(e) =>
-            setNewTask({
-              ...newTask,
-              dueDate: e.target.value,
-            })
-          }
-        />
-
-        <select
-          value={newTask.recurring}
-          onChange={(e) =>
-            setNewTask({
-              ...newTask,
-              recurring: e.target.value,
-            })
-          }
-        >
-          <option value="none">No Recurrence</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-
-        <button onClick={addTask}>Add Task</button>
-      </div>
-
-      {/* Edit Room Task */}
-      {editingTask && (
+    <div className="page-card room-page">
+      <div className="page-head">
         <div>
-          <h2>Edit Room Task</h2>
-
-          <input
-            type="text"
-            value={editingTask.title}
-            onChange={(e) =>
-              setEditingTask({
-                ...editingTask,
-                title: e.target.value,
-              })
-            }
-          />
-
-          <input
-            type="text"
-            value={editingTask.description || ""}
-            onChange={(e) =>
-              setEditingTask({
-                ...editingTask,
-                description: e.target.value,
-              })
-            }
-          />
-
-          <input
-            type="date"
-            value={editingTask.dueDate}
-            onChange={(e) =>
-              setEditingTask({
-                ...editingTask,
-                dueDate: e.target.value,
-              })
-            }
-          />
-
-          <select
-            value={editingTask.recurring}
-            onChange={(e) =>
-              setEditingTask({
-                ...editingTask,
-                recurring: e.target.value,
-              })
-            }
-          >
-            <option value="none">No Recurrence</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-          </select>
-
-          <button onClick={updateTask}>Save Changes</button>
-
-          <button onClick={() => setEditingTask(null)}>
-            Cancel
-          </button>
+          <p className="eyebrow">Daily environment</p>
+          <h1>Room</h1>
+          <p className="muted">Keep the basics around you handled.</p>
         </div>
-      )}
+        <label className="field room-date">
+          <span className="field-label">Date</span>
+          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+        </label>
+      </div>
 
-      {/* Room Tasks */}
-      <h2>Room Tasks</h2>
+      <section className="food-section">
+        <div className="home-module-head">
+          <div>
+            <p className="section-title">Room status</p>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>Daily check-in</h2>
+          </div>
+          <span className="room-progress">{completed}/3 completed</span>
+        </div>
 
-      {tasks.length === 0 ? (
-        <p>No tasks for this date.</p>
-      ) : (
-        tasks.map((task) => {
-          const isCompleted =
-            task.recurring === "none"
-              ? task.completed
-              : task.completedDates.includes(selectedDate);
-
-          return (
-            <div key={task._id}>
-              <h3>{task.title}</h3>
-
-              {task.description && <p>{task.description}</p>}
-
-              <p>
-                Due: {new Date(task.dueDate).toLocaleDateString()}
-              </p>
-
-              <p>Recurring: {task.recurring}</p>
-
-              <p>
-                {isCompleted ? (
-                  "✓ Completed"
-                ) : (
-                  <>
-                    ○ Not completed
-                    <button onClick={() => completeTask(task)}>
-                      Complete
-                    </button>
-                  </>
-                )}
-              </p>
-
-              <button
-                onClick={() =>
-                  setEditingTask({
-                    ...task,
-                    dueDate: task.dueDate
-                      ? task.dueDate.split("T")[0]
-                      : "",
-                  })
-                }
-              >
-                Edit
-              </button>
-
-              <button onClick={() => deleteTask(task)}>
-                Delete
-              </button>
+        <div className="room-status-grid">
+          {[
+            ['waterAvailable', 'Water', 'Is water available?'],
+            ['roomClean', 'Room', 'Is the room clean?'],
+            ['clothesReady', 'Clothes', 'Are clothes ready?'],
+          ].map(([key, title, question]) => (
+            <div className="room-status-card" key={key}>
+              <h3>{title}</h3>
+              <p>{question}</p>
+              <div className="status-choice">
+                <button
+                  type="button"
+                  className={`btn ${roomStatus[key] === true ? 'selected-yes' : ''}`}
+                  onClick={() => setRoomStatus({ ...roomStatus, [key]: true })}
+                >Yes</button>
+                <button
+                  type="button"
+                  className={`btn ${roomStatus[key] === false ? 'selected-no' : ''}`}
+                  onClick={() => setRoomStatus({ ...roomStatus, [key]: false })}
+                >No</button>
+              </div>
             </div>
-          );
-        })
-      )}
+          ))}
+        </div>
+
+        <div className="room-status-footer">
+          <div className="room-overview">
+            <div className="room-overview-item"><span>Water</span><strong>{roomStatus.waterAvailable === true ? 'Available' : roomStatus.waterAvailable === false ? 'Unavailable' : 'Not set'}</strong></div>
+            <div className="room-overview-item"><span>Room</span><strong>{roomStatus.roomClean === true ? 'Clean' : roomStatus.roomClean === false ? 'Needs work' : 'Not set'}</strong></div>
+            <div className="room-overview-item"><span>Clothes</span><strong>{roomStatus.clothesReady === true ? 'Ready' : roomStatus.clothesReady === false ? 'Not ready' : 'Not set'}</strong></div>
+          </div>
+          <button type="button" className="btn primary" onClick={saveRoomStatus}>Save status</button>
+        </div>
+      </section>
+
+      <section className="room-tasks">
+        <p className="section-title">Room tasks</p>
+        <div className="home-module-head">
+          <div>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>Keep the space moving</h2>
+            <p className="muted" style={{ margin: '4px 0 0', fontSize: '12px' }}>Add one-off or recurring room tasks.</p>
+          </div>
+        </div>
+
+        <div className="room-task-form">
+          <label className="field"><span className="field-label">Task</span><input type="text" placeholder="Task title" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} /></label>
+          <label className="field"><span className="field-label">Description</span><input type="text" placeholder="Optional detail" value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} /></label>
+          <label className="field"><span className="field-label">Due</span><input type="date" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} /></label>
+          <label className="field"><span className="field-label">Repeat</span><select value={newTask.recurring} onChange={(e) => setNewTask({ ...newTask, recurring: e.target.value })}><option value="none">No recurrence</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
+          <button type="button" className="btn primary" onClick={addTask}>+ Add task</button>
+        </div>
+
+        {editingTask && (
+          <div className="room-edit-form">
+            <label className="field"><span className="field-label">Task</span><input type="text" value={editingTask.title} onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })} /></label>
+            <label className="field"><span className="field-label">Description</span><input type="text" value={editingTask.description || ''} onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })} /></label>
+            <label className="field"><span className="field-label">Due</span><input type="date" value={editingTask.dueDate} onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })} /></label>
+            <label className="field"><span className="field-label">Repeat</span><select value={editingTask.recurring} onChange={(e) => setEditingTask({ ...editingTask, recurring: e.target.value })}><option value="none">No recurrence</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
+            <button type="button" className="btn primary" onClick={updateTask}>Save</button>
+            <button type="button" className="btn" onClick={() => setEditingTask(null)}>Cancel</button>
+          </div>
+        )}
+
+        <div className="room-tasks-list" style={{ marginTop: '12px' }}>
+          {tasks.length === 0 ? (
+            <div className="empty-state"><strong>No room tasks</strong><p className="muted">Nothing planned for this date yet.</p></div>
+          ) : tasks.map((task) => {
+            const isCompleted = task.recurring === 'none' ? task.completed : task.completedDates.includes(selectedDate);
+            return (
+              <div key={task._id} className="room-task-item">
+                <div>
+                  <h3>{task.title}</h3>
+                  {task.description && <p>{task.description}</p>}
+                  <p>Due {new Date(task.dueDate).toLocaleDateString()} · {task.recurring === 'none' ? 'One-off' : task.recurring}</p>
+                  <div className={isCompleted ? 'room-task-complete' : 'room-task-incomplete'}>{isCompleted ? '✓ Completed' : '○ Not completed'}</div>
+                </div>
+                <div className="room-task-actions">
+                  {!isCompleted && <button type="button" className="btn primary" onClick={() => completeTask(task)}>Complete</button>}
+                  <button type="button" className="link" onClick={() => setEditingTask({ ...task, dueDate: task.dueDate ? task.dueDate.split('T')[0] : '' })}>Edit</button>
+                  <button type="button" className="link danger" onClick={() => deleteTask(task)}>Delete</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }
