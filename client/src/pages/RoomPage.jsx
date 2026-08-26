@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useDate } from "../context/DateContext";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 function RoomPage() {
   const { selectedDate, setSelectedDate } = useDate();
 
@@ -27,7 +29,7 @@ function RoomPage() {
 
   // Get room status whenever selected date changes
   useEffect(() => {
-    fetch(`http://localhost:5000/api/room/status/${selectedDate}`)
+    fetch(`${API_URL}/room/status/${selectedDate}`)
       .then((res) => res.json())
       .then((data) => {
         setRoomStatus(data);
@@ -39,7 +41,7 @@ function RoomPage() {
 
   // Get room tasks whenever selected date changes
   useEffect(() => {
-    fetch(`http://localhost:5000/api/room/tasks/${selectedDate}`)
+    fetch(`${API_URL}/room/tasks/${selectedDate}`)
       .then((res) => res.json())
       .then((data) => {
         setTasks(data);
@@ -53,7 +55,7 @@ function RoomPage() {
   const saveRoomStatus = async () => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/room/status/${selectedDate}`,
+        `${API_URL}/room/status/${selectedDate}`,
         {
           method: "PUT",
           headers: {
@@ -79,7 +81,7 @@ function RoomPage() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/room/tasks", {
+      const response = await fetch("${API_URL}/room/tasks", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -125,7 +127,7 @@ function RoomPage() {
             };
 
       const response = await fetch(
-        `http://localhost:5000/api/room/tasks/${task._id}/complete`,
+        `${API_URL}/room/tasks/${task._id}/complete`,
         {
           method: "PUT",
           headers: {
@@ -163,7 +165,7 @@ function RoomPage() {
       }
 
       const response = await fetch(
-        `http://localhost:5000/api/room/tasks/${editingTask._id}`,
+        `${API_URL}/room/tasks/${editingTask._id}`,
         {
           method: "PUT",
           headers: {
@@ -200,7 +202,7 @@ function RoomPage() {
   const deleteTask = async (task) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/room/tasks/${task._id}`,
+        `${API_URL}/room/tasks/${task._id}`,
         {
           method: "DELETE",
         },
