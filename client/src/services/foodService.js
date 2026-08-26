@@ -56,9 +56,15 @@ export const deleteMealItem = async (logId, meal, itemId) => {
 
 // AI food analysis
 export const analyzeFood = async (text) => {
-  const res = await api.post('/ai/food-parser', {
-    text,
-  });
+  const res = await api.post(
+    '/ai/food-parser',
+    {
+      text,
+    },
+    {
+      timeout: 60000,
+    }
+  );
 
   return res.data;
 };
