@@ -2,19 +2,15 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDate } from '../context/DateContext';
 import { useAuth } from '../context/AuthContext';
-import HomeCalendar from '../components/HomeCalendar';
 import TodoList from '../components/TodoList';
+import ActivityHeatmap from '../components/ActivityHeatmap';
 import useHomeDashboard, { foodTotalsFromLog, mealItemCount } from '../hooks/useHomeDashboard';
+import { getDatePermission } from '../utils/activity';
 
 const greetingForHour = (h) => {
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
-};
-
-const localISODate = (date = new Date()) => {
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 };
 
 const formatDisplayDate = (iso) => {
@@ -36,10 +32,11 @@ const HomePage = () => {
   const { selectedDate } = useDate();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { todos, food, room, money, refreshTodos } = useHomeDashboard(selectedDate);
+  const { todos, food, room, money, streak, activityRefreshKey, refreshTodos } = useHomeDashboard(selectedDate);
 
   const greet = greetingForHour(new Date().getHours());
-  const isToday = selectedDate === localISODate();
+  const datePermission = getDatePermission(selectedDate);
+  const isToday = datePermission === 'today';
   const displayDate = formatDisplayDate(selectedDate);
 
   const todoItems = todos.items || [];
@@ -116,7 +113,10 @@ const HomePage = () => {
             loading={todos.loading}
             error={todos.error}
             onChanged={refreshTodos}
+            datePermission={datePermission}
           />
+
+          <ActivityHeatmap streak={streak} refreshKey={activityRefreshKey} />
 
           <div className="home-modules">
             <section className="card home-module">
@@ -191,10 +191,6 @@ const HomePage = () => {
             </section>
           </div>
         </div>
-
-        <aside className="side-col">
-          <HomeCalendar />
-        </aside>
       </div>
     </div>
   );

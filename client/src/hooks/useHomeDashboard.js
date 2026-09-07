@@ -3,6 +3,7 @@ import * as todoService from '../services/todoService';
 import * as foodService from '../services/foodService';
 import * as roomService from '../services/roomService';
 import * as moneyService from '../services/moneyService';
+import * as streakService from '../services/streakService';
 
 const emptyTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
 
@@ -50,6 +51,8 @@ const useHomeDashboard = (date) => {
     total: 0,
     transactions: [],
   });
+  const [streak, setStreak] = useState({ loading: true, error: null, data: null });
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
   const loadTodos = async (day, cancelled) => {
     setTodos((prev) => ({ ...prev, loading: true, error: null }));
@@ -67,11 +70,28 @@ const useHomeDashboard = (date) => {
     }
   };
 
+  const loadStreak = async (cancelled) => {
+    setStreak((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const res = await streakService.getStreak();
+      if (!cancelled?.()) setStreak({ loading: false, error: null, data: res });
+    } catch (e) {
+      if (!cancelled?.()) {
+        setStreak({
+          loading: false,
+          error: e.response?.data?.message || 'Failed to load streak',
+          data: null,
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     const isCancelled = () => cancelled;
 
     loadTodos(date, isCancelled);
+    loadStreak(isCancelled);
 
     setFood({ loading: true, error: null, log: null });
     foodService
@@ -134,9 +154,12 @@ const useHomeDashboard = (date) => {
     };
   }, [date]);
 
-  const refreshTodos = () => loadTodos(date, () => false);
+  const refreshTodos = () => Promise.all([
+    loadTodos(date, () => false),
+    loadStreak(() => false),
+  ]).then(() => setActivityRefreshKey((value) => value + 1));
 
-  return { todos, food, room, money, refreshTodos };
+  return { todos, food, room, money, streak, activityRefreshKey, refreshTodos };
 };
 
 export default useHomeDashboard;

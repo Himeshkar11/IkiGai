@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useState } from 'react';
+import { getLogicalToday } from '../utils/activity';
 
 const DateContext = createContext();
 
 export const DateProvider = ({ children }) => {
-  const today = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  const isoToday = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-  const [selectedDate, setSelectedDate] = useState(isoToday);
+  const [selectedDate, setSelectedDate] = useState(getLogicalToday());
 
   return (
     <DateContext.Provider value={{ selectedDate, setSelectedDate }}>

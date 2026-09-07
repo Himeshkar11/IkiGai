@@ -38,7 +38,7 @@ The implemented system is a two-process client/server application:
 6. MongoDB stores user-owned documents.
 7. The AI food parser is a backend integration boundary to OpenRouter.
 
-The backend does not have a separate repository or domain-service layer for todos, food, food logs, money, or room. Controllers perform request validation, business logic, and Mongoose access directly. `server/services/` contains only health and AI parsing services.
+The backend does not have a separate repository or domain-service layer for todos, food, food logs, money, or room. Controllers perform request validation and most business logic directly; `server/services/todoActivityService.js` is the shared completed-Todo aggregation boundary used by activity and streak controllers.
 
 ## 2. High-Level Architecture
 
@@ -95,6 +95,8 @@ IkiGai/
 |       |   |-- Sidebar.jsx
 |       |   |-- HomeCalendar.jsx
 |       |   |-- TodoList.jsx
+|       |   |-- ActivityHeatmap.jsx
+|       |   |-- StreakCard.jsx
 |       |   |-- QuickSummary.jsx
 |       |-- context/
 |       |   |-- AuthContext.jsx
@@ -114,11 +116,14 @@ IkiGai/
 |       |-- services/
 |       |   |-- api.js
 |       |   |-- todoService.js
+|       |   |-- activityService.js
+|       |   |-- streakService.js
 |       |   |-- foodService.js
 |       |   |-- roomService.js
 |       |   |-- moneyService.js
 |       |-- utils/
 |           |-- format.js
+|           |-- activity.js
 |-- server/
     |-- package.json
     |-- package-lock.json
@@ -131,6 +136,8 @@ IkiGai/
     |-- controllers/
     |   |-- authController.js
     |   |-- todoController.js
+    |   |-- activityController.js
+    |   |-- streakController.js
     |   |-- foodController.js
     |   |-- foodLogController.js
     |   |-- moneyController.js
@@ -153,6 +160,8 @@ IkiGai/
     |   |-- authRoutes.js
     |   |-- healthRoutes.js
     |   |-- todoRoutes.js
+    |   |-- activityRoutes.js
+    |   |-- streakRoutes.js
     |   |-- foodRoutes.js
     |   |-- foodLogRoutes.js
     |   |-- moneyRoutes.js
@@ -162,6 +171,9 @@ IkiGai/
     |-- services/
         |-- healthService.js
         |-- aiFoodParser.js
+      |-- todoActivityService.js
+    |-- utils/
+      |-- dateUtils.js
 ```
 
 ### Root files and folders
@@ -201,7 +213,7 @@ IkiGai/
 | `client/src/context/AppContext.jsx` | Owns global API health status, initially `{ status: 'checking' }`. | `App.jsx`, `useHealthCheck.js`. |
 | `client/src/context/DateContext.jsx` | Owns the selected local calendar date as `YYYY-MM-DD`. | Home, food, room, money pages, calendar. |
 | `client/src/hooks/useHealthCheck.js` | Calls `getHealthStatus()` on mount and writes success/error to `AppContext`. | `AppShell` in `App.jsx`. |
-| `client/src/hooks/useHomeDashboard.js` | Fetches todos, food log, room status, and money for one date. Exposes loading/error/data state and `refreshTodos`. Also computes fallback nutrition totals and meal item counts. | `HomePage.jsx`. |
+| `client/src/hooks/useHomeDashboard.js` | Fetches todos, food log, room status, money, and backend-derived streak data. Exposes loading/error/data state and refreshes todos plus streak/activity after Todo mutations. Also computes fallback nutrition totals and meal item counts. | `HomePage.jsx`. |
 
 #### Components and pages
 
@@ -209,10 +221,12 @@ IkiGai/
 | --- | --- |
 | `client/src/components/Layout.jsx` | Shared authenticated shell: `Sidebar` plus main content. Used by `AppShell`. |
 | `client/src/components/Sidebar.jsx` | Main navigation for Home, Food, Room, and Money; displays authenticated user and performs logout. Uses React Router and `AuthContext`. |
-| `client/src/components/HomeCalendar.jsx` | Month calendar. Reads/writes `DateContext`; selecting a cell changes the date consumed by each module. |
+| `client/src/components/HomeCalendar.jsx` | Reusable month calendar still used by Food and Money pages. It is no longer rendered on Home because Home uses the activity heatmap. |
 | `client/src/components/TodoList.jsx` | Date-specific task UI. Calls `todoService` for create/update/delete/complete and asks `HomePage` to refresh. |
+| `client/src/components/ActivityHeatmap.jsx` | Home productivity visualization. Fetches one month of compact activity counts, renders aligned day cells, month navigation, intensity legend, accessible details, and supporting streak statistics. |
+| `client/src/components/StreakCard.jsx` | Legacy reusable streak card retained in the tree but no longer rendered by Home; active-day streak data remains available through the streak API. |
 | `client/src/components/QuickSummary.jsx` | Present in the tree but not imported by the current application path. Treat as unused until a caller is added. |
-| `client/src/pages/HomePage.jsx` | Dashboard page. Calls `useHomeDashboard`, renders `TodoList`, nutrition summary, room summary, spending summary, and `HomeCalendar`; navigates to feature pages. |
+| `client/src/pages/HomePage.jsx` | Dashboard page. Calls `useHomeDashboard`, renders `TodoList`, `ActivityHeatmap`, nutrition summary, room summary, and spending summary; navigates to feature pages. |
 | `client/src/pages/LoginPage.jsx` | Login form. Uses `AuthContext.login`, navigates after success, and preserves a requested route through router location state. |
 | `client/src/pages/RegisterPage.jsx` | Registration form. Uses `AuthContext.register` and navigation. |
 | `client/src/pages/FoodPage.jsx` | Date-specific food log UI. Loads logs, requests AI parsing, confirms one or more nutrition items through `foodService`, and edits/deletes meal items. |
@@ -274,6 +288,8 @@ Page/component
 | --- | --- |
 | `client/src/services/api.js` | Axios base URL is `VITE_API_URL` or `http://localhost:5000/api`; request interceptor reads `authToken` and adds `Authorization: Bearer ...`; response interceptor clears token and redirects to `/login` on HTTP 401. |
 | `client/src/services/todoService.js` | `getTodosByDate` -> `GET /todos?date=...`; `createTodo` -> `POST /todos`; `updateTodo` -> `PUT /todos/:id`; `deleteTodo` -> `DELETE /todos/:id`. |
+| `client/src/services/activityService.js` | `getMonthlyActivity(month)` -> authenticated `GET /activity?month=YYYY-MM`; returns compact completed-task counts and monthly totals. |
+| `client/src/services/streakService.js` | `getStreak` -> authenticated `GET /streak`; returns backend-derived current/longest streak and current logical-day progress. |
 | `client/src/services/foodService.js` | Food master search/create/update/delete; date log read; add/update/delete meal item; `analyzeFood` -> `POST /ai/food-parser` with a 60-second timeout. |
 | `client/src/services/roomService.js` | `getRoomStatusByDate` -> `GET /room/status/:date`. Used by the home dashboard, so it uses Axios and the JWT interceptor. It does not implement room task operations. |
 | `client/src/services/moneyService.js` | `getTransactionsByDate` -> `GET /money?date=...`; create/update/delete transaction operations. |
@@ -287,6 +303,8 @@ App.jsx
 HomePage.jsx
   -> useHomeDashboard
     -> todoService -> /api/todos -> todoController -> Todo
+    -> streakService -> /api/streak -> streakController -> Todo completion history
+    -> activityService -> /api/activity?month=... -> activityController -> Todo completion history
     -> foodService -> /api/food-logs/date/:date -> foodLogController -> FoodLog
     -> roomService -> /api/room/status/:date -> room.js -> RoomStatus
     -> moneyService -> /api/money?date=... -> moneyController -> MoneyTransaction
@@ -328,13 +346,15 @@ Important runtime detail: `connectDB()` is called without awaiting it. The HTTP 
 
 | Path | Purpose and relationships |
 | --- | --- |
-| `server/app.js` | Express composition root. Mounts `/api/health`, `/api/auth`, `/api/todos`, `/api/foods`, `/api/food-logs`, `/api/room`, `/api/money`, and `/api/ai`. It imports `room.js`, not `roomRoutes.js`. |
+| `server/app.js` | Express composition root. Mounts `/api/health`, `/api/auth`, `/api/todos`, `/api/foods`, `/api/food-logs`, `/api/room`, `/api/money`, `/api/ai`, `/api/streak`, and `/api/activity`. It imports `room.js`, not `roomRoutes.js`. |
 | `server/server.js` | Process entry and HTTP listener. |
 | `server/config/db.js` | Reads `MONGODB_URI`; connects Mongoose with IPv4, server selection, and socket timeouts; logs connection failures. |
 | `server/middleware/auth.js` | Reads the Bearer token, verifies it with `JWT_SECRET`, attaches `{ userId }` to `req.user`, and returns 401 for absent/invalid/expired tokens. |
 | `server/middleware/errorHandler.js` | Converts Mongoose validation, duplicate-key, cast, JWT, custom-status, and generic errors into JSON responses. Includes stack traces outside production. |
 | `server/controllers/authController.js` | Registration, login, token generation, password hashing, and current-user lookup. |
 | `server/controllers/todoController.js` | Date normalization, user-scoped todo CRUD, priority validation, and completion totals. |
+| `server/controllers/activityController.js` | Validates a requested `YYYY-MM` month, filters future months, and returns compact monthly completed-task counts and summary totals. |
+| `server/controllers/streakController.js` | Authenticated, read-only streak calculation from the user-scoped Todo collection. Groups stored Todo dates, applies the zero-task rule, and walks consecutive successful dates. |
 | `server/controllers/foodController.js` | User-scoped food master CRUD and case-insensitive search. |
 | `server/controllers/foodLogController.js` | Food log CRUD, nested meal-item operations, nutrition snapshot creation, and daily total recalculation. |
 | `server/controllers/moneyController.js` | User-scoped transaction CRUD, positive amount validation, daily totals, and monthly aggregate. |
@@ -342,8 +362,12 @@ Important runtime detail: `connectDB()` is called without awaiting it. The HTTP 
 | `server/controllers/healthController.js` | Returns a static health payload with `status: 'OK'`, message, and timestamp. |
 | `server/services/healthService.js` | Exists and returns the same health-shaped object, but the current health controller does not import it. |
 | `server/services/aiFoodParser.js` | Configures OpenRouter through the OpenAI SDK; asks the model for structured nutrition; contains whitelist-based protein post-processing. |
+| `server/services/todoActivityService.js` | Shared server-side query/grouping for completed Todos by their `completedAt` logical activity date. Used by activity and streak controllers. |
 | `server/routes/room.js` | Mounted live room implementation with inline async handlers and direct Mongoose access. It has no `auth` middleware. |
 | `server/routes/roomRoutes.js` | Unmounted alternative route module. It applies auth but every declared handler returns HTTP 501. It is dead/unreachable from current `app.js`. |
+| `server/routes/streakRoutes.js` | Authenticated route for `GET /api/streak`; delegates to `streakController.js`. |
+| `server/routes/activityRoutes.js` | Authenticated route for `GET /api/activity?month=YYYY-MM`; delegates to `activityController.js`. |
+| `server/utils/dateUtils.js` | Centralized local 4 AM logical-date boundary and date-key helpers. It preserves UTC date labels for stored Todo due dates. |
 
 ## 6. API Documentation
 
@@ -373,11 +397,25 @@ Router: `server/routes/todoRoutes.js` applies `auth` to every route. Controller:
 | Method | Endpoint | Body/query | Behavior |
 | --- | --- | --- | --- |
 | `GET` | `/api/todos?date=YYYY-MM-DD` | Required `date` query | Returns `todos`, `total`, `completed`, `remaining`, and normalized date. Filters due date using UTC day bounds. |
-| `POST` | `/api/todos` | `title`, `dueDate`; optional `description`, `completed`, `priority` | Creates a todo; returns 201 `{ success, todo }`. Priority is `low`, `medium`, or `high`; missing priority defaults to medium. |
-| `PUT` | `/api/todos/:id` | Any supported mutable fields | User-scoped update; returns `{ success, todo }`. |
+| `POST` | `/api/todos` | `title`, `dueDate`; optional `description`, `completed`, `priority` | Creates a todo; returns 201 `{ success, todo }`. Priority is `low`, `medium`, or `high`; missing priority defaults to medium. If created completed, the server sets `completedAt`. |
+| `PUT` | `/api/todos/:id` | Any supported mutable fields | User-scoped update; returns `{ success, todo }`. Completion transitions are server-timestamped in `completedAt`; reopening clears it. |
 | `DELETE` | `/api/todos/:id` | None | User-scoped deletion; returns `{ success, message }`. |
 
 Frontend callers: `TodoList.jsx` via `todoService.js`; dashboard reads via `useHomeDashboard.js`.
+
+### Todo activity and streak
+
+Router: `server/routes/streakRoutes.js`, authenticated with the shared JWT middleware. Controller: `server/controllers/streakController.js`. Database: the authenticated user's `Todo` documents; no streak counter is stored.
+
+| Method | Endpoint | Auth | Response and behavior |
+| --- | --- | --- | --- |
+| `GET` | `/api/streak` | Bearer JWT | Returns `{ success, currentStreak, longestStreak, today }`. `today` contains the current 4 AM logical date, total Todo count, completed count, and `isComplete`. |
+
+`GET /api/activity?month=YYYY-MM` returns `{ success, month, totalCompleted, activeDays, activity }`, where `activity` contains only dates with one or more completed Todos. It rejects future months and omits future logical days in the current month. Counts are based on `Todo.completedAt`, not Todo creation or due dates.
+
+`GET /api/streak` uses the same completed-at activity grouping. An active day is any logical day with at least one completed Todo; current and longest streaks count active days, and task quantity affects heatmap intensity but never adds extra streak days. The endpoint never accepts a user id from the request.
+
+The logical clock is centralized in `server/utils/dateUtils.js`: local times from 04:00 through 03:59:59 of the next local calendar day belong to one logical date. `Todo.completedAt` is the source timestamp for activity and streak calculations. Existing completed Todos without `completedAt` cannot be assigned a reliable completion day and are excluded from these metrics.
 
 ### Food master records
 
@@ -539,7 +577,7 @@ erDiagram
 | Model path | Collection/entity shape | Relationships and indexes |
 | --- | --- | --- |
 | `server/models/User.js` | `email`, hashed `password`, `name`, timestamps. Email is lowercase, unique, regex validated; password is `select: false`, minimum length 6. | Root identity referenced by user-owned documents. |
-| `server/models/Todo.js` | `userId`, title, description, due date, completion, priority, timestamps. | `userId` references `User`; indexes on user/createdAt, user/completed, user/dueDate. |
+| `server/models/Todo.js` | `userId`, title, description, due date, completion, server-controlled `completedAt`, priority, timestamps. | `userId` references `User`; indexes on user/createdAt, user/completed, user/dueDate, and `completedAt`. |
 | `server/models/Food.js` | User-owned named nutrition master: serving size/unit, calories, protein, carbs, fat, fiber, timestamps. | `userId` references `User`; indexes on user/name and user/createdAt. |
 | `server/models/FoodLog.js` | User/date document with five meal arrays, nested food items, and daily totals. | `userId` references `User`; nested `foodId` may reference `Food`; indexes on user/date and user/createdAt. |
 | `server/models/MoneyTransaction.js` | `userId`, description, numeric amount, date, timestamps. | `userId` references `User`; indexes on user/date and user/createdAt. |
@@ -556,6 +594,7 @@ erDiagram
 | `authController.login` | `User` | `findOne({ email }).select('+password')`, bcrypt compare. | `POST /api/auth/login`. |
 | `authController.me` | `User` | `findById(req.user.userId)`. | `GET /api/auth/me`. |
 | `todoController.getTodos` | `Todo` | Date/user `find`, sorted; computes completed count in memory. | Dashboard and `TodoList`. |
+| `todoActivityService.getCompletedActivity` | `Todo` | User-scoped query for `completed: true` and a `completedAt` range; groups timestamps by centralized logical activity date. | Activity and streak controllers. |
 | `todoController.createTodo` | `Todo` | `create` after title/date/priority validation. | `TodoList`. |
 | `todoController.updateTodo` | `Todo` | User-scoped `findOneAndUpdate`. | `TodoList`. |
 | `todoController.deleteTodo` | `Todo` | User-scoped `findOneAndDelete`. | `TodoList`. |
@@ -669,15 +708,45 @@ sequenceDiagram
     DB-->>E: Module data
     E-->>API: JSON responses
     API-->>D: Loading/error/data updates
-    D-->>H: Cards, TodoList, nutrition, room, spending
+    D-->>H: Cards, TodoList, nutrition, room, spending, streak
 ```
+
+### Todo activity and streak flow
+
+```mermaid
+flowchart TD
+  Card[ActivityHeatmap] --> Service[activityService.js]
+  Service --> API[GET /api/activity?month=YYYY-MM]
+  API --> ActivityRoute[activityRoutes.js]
+  ActivityRoute --> Auth[auth middleware]
+  Auth --> ActivityController[activityController.js]
+  ActivityController --> ActivityService[todoActivityService.js]
+  ActivityService --> Todo[Todo.completedAt]
+  Todo --> Mongo[(MongoDB)]
+  ActivityController --> Cells[Date to completed-count map]
+  Cells --> Card
+  Streak[Supporting streak statistic] --> StreakService[streakService.js]
+  StreakService --> StreakAPI[GET /api/streak]
+  StreakAPI --> StreakRoute[streakRoutes.js]
+  StreakRoute --> Auth
+  Auth --> StreakController[streakController.js]
+  StreakController --> ActivityService
+  StreakController --> StreakResult[Active-day current/longest streak]
+  StreakResult --> Card
+    TodoList[TodoList mutations] --> Refresh[refreshTodos]
+    Refresh --> Card
+```
+
+The heatmap month is independent of `DateContext.selectedDate`: changing a heatmap day selects that date for the existing Todo dashboard, while changing the dashboard date does not change the displayed heatmap month. Creating, editing, completing, or deleting a Todo calls `refreshTodos`, which refreshes the selected-day Todo list, streak, and current heatmap month.
 
 Feature summary:
 
 | Feature | Frontend | API/backend | Database/external |
 | --- | --- | --- | --- |
 | Authentication | `LoginPage`, `RegisterPage`, `AuthContext` | `authRoutes.js`, `authController.js`, `auth.js` | `User`, bcrypt, JWT. |
-| Home | `HomePage`, `HomeCalendar`, `TodoList`, `useHomeDashboard` | Four module endpoints | `Todo`, `FoodLog`, `RoomStatus`, `MoneyTransaction`. |
+| Home | `HomePage`, `TodoList`, `ActivityHeatmap`, `useHomeDashboard` | Four module endpoints plus activity/streak endpoints | `Todo`, `FoodLog`, `RoomStatus`, `MoneyTransaction`. |
+| Todo activity | `ActivityHeatmap`, `activityService` | Authenticated `GET /api/activity?month=YYYY-MM` | Derived from server-controlled `Todo.completedAt`; no mock activity. |
+| Todo streak | `streakService`, `useHomeDashboard` | Authenticated `GET /api/streak` | Active-day streak derived from the same completed-at Todo activity; no separate streak state. |
 | Todos | `TodoList`, `todoService` | `todoRoutes.js`, `todoController.js` | `Todo`. |
 | Food logs | `FoodPage`, `foodService` | `foodLogRoutes.js`, `foodLogController.js` | `FoodLog`, optionally `Food`. |
 | AI nutrition | `FoodPage`, `foodService.analyzeFood` | `aiRoutes.js`, `aiController.js`, `aiFoodParser.js` | OpenRouter; result is then stored in `FoodLog` on confirmation. |
@@ -1100,6 +1169,11 @@ Changing an API response shape
 | Database | `server/config/db.js` and `server/models/` | MongoDB connection and Mongoose schemas. |
 | Authentication | `client/src/context/AuthContext.jsx`, `server/middleware/auth.js` | JWT session state and request verification. |
 | API client | `client/src/services/api.js` | Axios base URL and auth interceptors. |
+| Activity API | `server/routes/activityRoutes.js`, `server/controllers/activityController.js` | Authenticated monthly completed-Todo aggregation. |
+| Activity UI | `client/src/components/ActivityHeatmap.jsx`, `client/src/services/activityService.js` | Home monthly heatmap, navigation, legend, and day details. |
+| Streak API | `server/routes/streakRoutes.js`, `server/controllers/streakController.js` | Authenticated active-day streak derived from completion history. |
+| Streak service | `client/src/services/streakService.js` | Supporting streak statistic consumed by the heatmap. |
+| Logical date utility | `server/utils/dateUtils.js` | Central 4 AM boundary and date-key helpers. |
 | Components | `client/src/components/` | Layout, navigation, calendar, and task UI. |
 | Pages | `client/src/pages/` | Home, auth, food, room, money, and not-found screens. |
 | State | `client/src/context/`, `client/src/hooks/` | Auth, date, health, and dashboard state. |

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 const navItems = [
   { to: '/', label: 'Home', icon: '⌂' },
@@ -48,6 +49,7 @@ const Sidebar = () => {
       <div className="sidebar-footer">
         {user && <div className="user-row"> <span className="user-emoji">👤</span> <span className="user-name">{user.name}</span> </div>}
         <div className="footer-actions">
+          <ThemeToggle className="sidebar-theme-toggle" />
           <button className="icon-btn" title="Settings">⚙️</button>
           <button className="ghost-btn" onClick={handleLogout}>Logout</button>
         </div>

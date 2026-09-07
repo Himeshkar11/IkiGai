@@ -3,6 +3,8 @@ import Layout from './components/Layout';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DateProvider } from './context/DateContext';
+import { ThemeProvider } from './context/ThemeContext';
+import ThemeToggle from './components/ThemeToggle';
 import useHealthCheck from './hooks/useHealthCheck';
 import FoodPage from './pages/FoodPage';
 import HomePage from './pages/HomePage';
@@ -99,6 +101,7 @@ const AppShell = () => {
           <p className="topbar-title">{location.pathname === '/' || location.pathname === '/home' ? 'Today' : location.pathname.slice(1).replace(/-/g, ' ')}</p>
         </div>
         <div className="topbar-right">
+          <ThemeToggle />
           <div
             className={`status-pill ${healthStatus?.status === 'ok' ? 'online' : 'offline'}`}
             title={statusText}
@@ -159,15 +162,17 @@ const AppShell = () => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <AppProvider>
-          <DateProvider>
-            <AppShell />
-          </DateProvider>
-        </AppProvider>
-      </AuthProvider>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AuthProvider>
+          <AppProvider>
+            <DateProvider>
+              <AppShell />
+            </DateProvider>
+          </AppProvider>
+        </AuthProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 

@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 const Todo = require('../models/Todo');
+const { getStoredTodoDate, getDatePermission, getLogicalToday } = require('../utils/dateUtils');
+
+const DATE_LOCK_MSG = 'Tasks can only be modified for the current day.';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -63,17 +66,34 @@ const createTodo = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const title = String(req.body.title || '').trim();
-    const day = toDayString(req.body.dueDate);
+    const rawDueDate = req.body.dueDate;
+    const explicitDay = (rawDueDate !== undefined && rawDueDate !== null && String(rawDueDate).trim() !== '')
+      ? toDayString(rawDueDate)
+      : null;
+    const day = explicitDay || getLogicalToday();
     const priority = normalizePriority(req.body.priority);
 
     if (!title) {
       return res.status(400).json({ success: false, message: 'Title is required' });
     }
-    if (!day) {
+    if (rawDueDate !== undefined && rawDueDate !== null && String(rawDueDate).trim() !== '' && !explicitDay) {
       return res.status(400).json({ success: false, message: 'A valid dueDate (YYYY-MM-DD) is required' });
     }
     if (!priority) {
       return res.status(400).json({ success: false, message: 'Priority must be low, medium, or high' });
+    }
+    // Date-permission guard: allow a normal create request to default to today,
+    // while still refusing legacy or explicit past/future dates.
+    if (explicitDay && getDatePermission(explicitDay) !== 'today') {
+      return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
+    }
+
+    const completed = Boolean(req.body.completed);
+    let completedAt = null;
+    if (completed) {
+      completedAt = req.body.completedAt ? new Date(req.body.completedAt) : new Date();
+    } else if (req.body.completedAt) {
+      completedAt = new Date(req.body.completedAt);
     }
 
     const todo = await Todo.create({
@@ -81,7 +101,8 @@ const createTodo = async (req, res, next) => {
       title,
       description: req.body.description ? String(req.body.description).trim() : undefined,
       dueDate: dayBounds(day).start,
-      completed: Boolean(req.body.completed),
+      completed,
+      completedAt,
       priority,
     });
 
@@ -111,8 +132,46 @@ const updateTodo = async (req, res, next) => {
     if (req.body.description !== undefined) {
       updates.description = String(req.body.description).trim();
     }
+    const currentTodo = await Todo.findOne({ _id: id, userId }).select('completed completedAt dueDate');
+    if (!currentTodo) {
+      return res.status(404).json({ success: false, message: 'Todo not found' });
+    }
+
+    // Date-permission guard: the task must belong to today's logical date.
+    const taskDate = getStoredTodoDate(currentTodo.dueDate);
+    if (getDatePermission(taskDate) !== 'today') {
+      return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
+    }
+
+    // Also block attempts to move the task to a non-today date.
+    if (req.body.dueDate !== undefined) {
+      const newDay = toDayString(req.body.dueDate);
+      if (!newDay) {
+        return res.status(400).json({ success: false, message: 'A valid dueDate (YYYY-MM-DD) is required' });
+      }
+      if (getDatePermission(newDay) !== 'today') {
+        return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
+      }
+    }
+
     if (req.body.completed !== undefined) {
-      updates.completed = Boolean(req.body.completed);
+      const completed = Boolean(req.body.completed);
+      updates.completed = completed;
+      if (completed) {
+        updates.completedAt = req.body.completedAt
+          ? new Date(req.body.completedAt)
+          : (currentTodo.completedAt || new Date());
+      } else {
+        updates.completedAt = null;
+      }
+    } else if (req.body.completedAt !== undefined) {
+      if (req.body.completedAt === null) {
+        updates.completedAt = null;
+        updates.completed = false;
+      } else {
+        updates.completedAt = new Date(req.body.completedAt);
+        updates.completed = true;
+      }
     }
     if (req.body.priority !== undefined) {
       const priority = normalizePriority(req.body.priority);
@@ -122,11 +181,9 @@ const updateTodo = async (req, res, next) => {
       updates.priority = priority;
     }
     if (req.body.dueDate !== undefined) {
-      const day = toDayString(req.body.dueDate);
-      if (!day) {
-        return res.status(400).json({ success: false, message: 'A valid dueDate (YYYY-MM-DD) is required' });
-      }
-      updates.dueDate = dayBounds(day).start;
+      // newDay already validated and permission-checked above; just apply it.
+      const newDay = toDayString(req.body.dueDate);
+      if (newDay) updates.dueDate = dayBounds(newDay).start;
     }
 
     const todo = await Todo.findOneAndUpdate(
@@ -134,10 +191,6 @@ const updateTodo = async (req, res, next) => {
       updates,
       { new: true, runValidators: true },
     );
-
-    if (!todo) {
-      return res.status(404).json({ success: false, message: 'Todo not found' });
-    }
 
     res.status(200).json({ success: true, todo });
   } catch (error) {
@@ -154,10 +207,17 @@ const deleteTodo = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Invalid id' });
     }
 
-    const todo = await Todo.findOneAndDelete({ _id: id, userId });
+    // Date-permission guard: find the task first to check its date, then delete.
+    const todo = await Todo.findOne({ _id: id, userId }).select('dueDate');
     if (!todo) {
       return res.status(404).json({ success: false, message: 'Todo not found' });
     }
+    const taskDate = getStoredTodoDate(todo.dueDate);
+    if (getDatePermission(taskDate) !== 'today') {
+      return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
+    }
+
+    await Todo.findOneAndDelete({ _id: id, userId });
 
     res.status(200).json({ success: true, message: 'Todo deleted' });
   } catch (error) {

@@ -15,6 +15,8 @@ const foodLogRoutes = require('./routes/foodLogRoutes');
 const roomRoutes = require('./routes/room');
 const moneyRoutes = require('./routes/moneyRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const streakRoutes = require('./routes/streakRoutes');
+const activityRoutes = require('./routes/activityRoutes');
 
 
 const app = express();
@@ -49,6 +51,8 @@ app.use('/api/food-logs', foodLogRoutes);
 app.use('/api/room', roomRoutes);
 app.use('/api/money', moneyRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/streak', streakRoutes);
+app.use('/api/activity', activityRoutes);
 
 // 404 handler
 app.use((req, res) => {

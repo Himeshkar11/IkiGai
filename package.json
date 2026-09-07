@@ -1,0 +1,13 @@
+{
+  "name": "ikigai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IkiGai Life OS",
+  "scripts": {
+    "test": "npm --prefix server test && npm --prefix client test",
+    "test:server": "npm --prefix server test",
+    "test:client": "npm --prefix client test",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev"
+  }
+}
