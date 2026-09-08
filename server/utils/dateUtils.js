@@ -56,12 +56,43 @@ const getStoredTodoDate = (value) => {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 };
 
+const parseCalendarDate = (value) => {
+  if (!value) return null;
+  const str = String(value).trim();
+  if (str.toLowerCase() === 'today') {
+    return getLogicalToday();
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
+  if (!match) return null;
+
+  const [, yStr, mStr, dStr] = match;
+  const y = Number(yStr);
+  const m = Number(mStr);
+  const d = Number(dStr);
+
+  const date = new Date(y, m - 1, d, 12, 0, 0);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== y ||
+    date.getMonth() !== m - 1 ||
+    date.getDate() !== d
+  ) {
+    return null;
+  }
+
+  return `${y}-${pad(m)}-${pad(d)}`;
+};
+
 const getLogicalDate = (value = new Date()) => {
   if (value === null) return null;
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
       return trimmed;
+    }
+    if (/^\d{4}-\d{2}-\d{2}T00:00:00(?:\.000)?Z$/i.test(trimmed)) {
+      return trimmed.slice(0, 10);
     }
   }
 
@@ -123,5 +154,6 @@ module.exports = {
   getPreviousLogicalDate,
   getStoredTodoDate,
   isTodayDate,
+  parseCalendarDate,
   parseDateKey,
 };

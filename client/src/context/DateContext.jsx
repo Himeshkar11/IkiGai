@@ -1,10 +1,42 @@
-import React, { createContext, useContext, useState } from 'react';
-import { getLogicalToday } from '../utils/activity';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { extractRouteDate, getLogicalToday, parseCalendarDate } from '../utils/activity';
 
 const DateContext = createContext();
 
 export const DateProvider = ({ children }) => {
-  const [selectedDate, setSelectedDate] = useState(getLogicalToday());
+  let location = null;
+  let navigate = null;
+  try {
+    location = useLocation();
+    navigate = useNavigate();
+  } catch {
+    // Graceful fallback if rendered outside a react-router Router in isolated unit tests
+  }
+
+  const routeDate = location ? extractRouteDate(location.pathname, location.search) : null;
+  const [selectedDate, setSelectedDateState] = useState(() => routeDate || getLogicalToday());
+
+  useEffect(() => {
+    if (!location) return;
+    const rDate = extractRouteDate(location.pathname, location.search);
+    if (rDate) {
+      setSelectedDateState(rDate);
+    } else if (location.pathname === '/' || location.pathname === '/home') {
+      setSelectedDateState(getLogicalToday());
+    }
+  }, [location?.pathname, location?.search]);
+
+  const setSelectedDate = (newDate) => {
+    const parsed = parseCalendarDate(newDate) || newDate;
+    setSelectedDateState(parsed);
+    if (location && navigate) {
+      const isDatePage = /^\/(?:tasks|todo|day|home)(\/|$)/i.test(location.pathname) || location.pathname === '/';
+      if (isDatePage && parsed) {
+        navigate(`/tasks/${parsed}`);
+      }
+    }
+  };
 
   return (
     <DateContext.Provider value={{ selectedDate, setSelectedDate }}>

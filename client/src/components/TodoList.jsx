@@ -36,6 +36,8 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
       await todoService.createTodo({
         title: input.trim(),
         priority: priority || 'medium',
+        dueDate: selectedDate,
+        date: selectedDate,
       });
       setInput('');
       setPriority('');

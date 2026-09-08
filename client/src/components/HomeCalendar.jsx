@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useDate } from '../context/DateContext';
+import { getLogicalToday } from '../utils/activity';
 
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -13,7 +14,13 @@ function formatISO(date) {
 
 const HomeCalendar = () => {
   const { selectedDate, setSelectedDate } = useDate();
-  const [view, setView] = useState(() => new Date(selectedDate));
+  const [view, setView] = useState(() => {
+    const parts = String(selectedDate || '').split('-').map(Number);
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      return new Date(parts[0], parts[1] - 1, 1, 12);
+    }
+    return new Date();
+  });
 
   const year = view.getFullYear();
   const month = view.getMonth();
@@ -33,12 +40,13 @@ const HomeCalendar = () => {
     return cells;
   }, [view]);
 
-  const prevMonth = () => setView(new Date(year, month - 1, 1));
-  const nextMonth = () => setView(new Date(year, month + 1, 1));
+  const prevMonth = () => setView(new Date(year, month - 1, 1, 12));
+  const nextMonth = () => setView(new Date(year, month + 1, 1, 12));
   const goToday = () => {
-    const t = new Date();
-    setView(new Date(t.getFullYear(), t.getMonth(), 1));
-    setSelectedDate(formatISO(t));
+    const todayStr = getLogicalToday();
+    const parts = todayStr.split('-').map(Number);
+    setView(new Date(parts[0], parts[1] - 1, 1, 12));
+    setSelectedDate(todayStr);
   };
 
   return (

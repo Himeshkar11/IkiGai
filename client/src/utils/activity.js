@@ -9,12 +9,78 @@ export const getActivityLevel = (completedTaskCount) => {
   return 4;
 };
 
+export const parseCalendarDate = (value) => {
+  if (!value) return null;
+  const str = String(value).trim();
+  if (str.toLowerCase() === 'today') {
+    return getLogicalToday();
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(str);
+  if (!match) return null;
+
+  const [, yStr, mStr, dStr] = match;
+  const y = Number(yStr);
+  const m = Number(mStr);
+  const d = Number(dStr);
+
+  const date = new Date(y, m - 1, d, 12, 0, 0);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== y ||
+    date.getMonth() !== m - 1 ||
+    date.getDate() !== d
+  ) {
+    return null;
+  }
+
+  return `${y}-${pad(m)}-${pad(d)}`;
+};
+
+export const extractRouteDate = (pathname, search) => {
+  if (search) {
+    const params = new URLSearchParams(search);
+    const qDate = params.get('date') || params.get('day');
+    const parsed = parseCalendarDate(qDate);
+    if (parsed) return parsed;
+  }
+
+  const match = /^\/(?:tasks|todo|day|home)\/([^/?#]+)/i.exec(pathname || '');
+  if (match) {
+    const parsed = parseCalendarDate(match[1]);
+    if (parsed) return parsed;
+  }
+
+  return null;
+};
+
+export const addDaysToDate = (dateString, delta = 0) => {
+  const parsed = parseCalendarDate(dateString);
+  if (!parsed) return null;
+
+  const [y, m, d] = parsed.split('-').map(Number);
+  const date = new Date(y, m - 1, d + delta, 12, 0, 0);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+export const formatCalendarDisplay = (dateString, options = { weekday: 'long', month: 'long', day: 'numeric' }) => {
+  const parsed = parseCalendarDate(dateString);
+  if (!parsed) return '';
+
+  const [y, m, d] = parsed.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0).toLocaleDateString(undefined, options);
+};
+
 export const getLogicalDate = (value = new Date()) => {
   if (value === null) return null;
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
       return trimmed;
+    }
+    // Stored calendar dates at UTC midnight should preserve their date string
+    if (/^\d{4}-\d{2}-\d{2}T00:00:00(?:\.000)?Z$/i.test(trimmed)) {
+      return trimmed.slice(0, 10);
     }
   }
 

@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const Todo = require('../models/Todo');
-const { getStoredTodoDate, getDatePermission, getLogicalToday } = require('../utils/dateUtils');
+const {
+  getStoredTodoDate,
+  getDatePermission,
+  getLogicalToday,
+  parseCalendarDate,
+} = require('../utils/dateUtils');
 
 const DATE_LOCK_MSG = 'Tasks can only be modified for the current day.';
 
@@ -9,7 +14,11 @@ const pad = (n) => String(n).padStart(2, '0');
 const toDayString = (value) => {
   if (!value) return null;
   const str = String(value).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const direct = parseCalendarDate(str);
+  if (direct) return direct;
+  if (/^\d{4}-\d{2}-\d{2}T00:00:00(?:\.000)?Z$/i.test(str)) {
+    return str.slice(0, 10);
+  }
   const d = new Date(str);
   if (Number.isNaN(d.getTime())) return null;
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
@@ -66,7 +75,9 @@ const createTodo = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const title = String(req.body.title || '').trim();
-    const rawDueDate = req.body.dueDate;
+    const rawDueDate = (req.body.dueDate !== undefined && req.body.dueDate !== null && String(req.body.dueDate).trim() !== '')
+      ? req.body.dueDate
+      : req.body.date;
     const explicitDay = (rawDueDate !== undefined && rawDueDate !== null && String(rawDueDate).trim() !== '')
       ? toDayString(rawDueDate)
       : null;
@@ -144,8 +155,9 @@ const updateTodo = async (req, res, next) => {
     }
 
     // Also block attempts to move the task to a non-today date.
-    if (req.body.dueDate !== undefined) {
-      const newDay = toDayString(req.body.dueDate);
+    if (req.body.dueDate !== undefined || req.body.date !== undefined) {
+      const candidate = req.body.dueDate !== undefined ? req.body.dueDate : req.body.date;
+      const newDay = toDayString(candidate);
       if (!newDay) {
         return res.status(400).json({ success: false, message: 'A valid dueDate (YYYY-MM-DD) is required' });
       }
@@ -180,9 +192,10 @@ const updateTodo = async (req, res, next) => {
       }
       updates.priority = priority;
     }
-    if (req.body.dueDate !== undefined) {
+    if (req.body.dueDate !== undefined || req.body.date !== undefined) {
       // newDay already validated and permission-checked above; just apply it.
-      const newDay = toDayString(req.body.dueDate);
+      const candidate = req.body.dueDate !== undefined ? req.body.dueDate : req.body.date;
+      const newDay = toDayString(candidate);
       if (newDay) updates.dueDate = dayBounds(newDay).start;
     }
 

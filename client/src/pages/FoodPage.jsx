@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDate } from '../context/DateContext';
 import * as foodService from '../services/foodService';
+import { addDaysToDate, formatCalendarDisplay, getLogicalToday } from '../utils/activity';
 
 const meals = [
   { key: 'breakfast', label: 'Breakfast', icon: '🍳' },
@@ -18,7 +19,6 @@ const statFields = [
   { key: 'calories', label: 'Calories', unit: 'kcal' },
 ];
 
-const isoDate = (d) => new Date(d).toISOString().slice(0, 10);
 
 const EmptyTotals = {
   calories: 0,
@@ -474,21 +474,17 @@ const FoodPage = () => {
   };
 
   const navDay = (delta) => {
-    const d = new Date(selectedDate);
-    d.setDate(d.getDate() + delta);
-    setSelectedDate(isoDate(d));
+    const nextDate = addDaysToDate(selectedDate, delta);
+    if (nextDate) setSelectedDate(nextDate);
   };
 
   const totals = calculateFoodTotals(foodLog);
 
-  const displayDate = new Date(selectedDate).toLocaleDateString(
-    undefined,
-    {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    }
-  );
+  const displayDate = formatCalendarDisplay(selectedDate, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
 
   const renderForm = (mealKey) => (
     <AddFoodForm
@@ -523,7 +519,7 @@ const FoodPage = () => {
 
         <button
           className="btn"
-          onClick={() => setSelectedDate(isoDate(new Date()))}
+          onClick={() => setSelectedDate(getLogicalToday())}
         >
           Today
         </button>

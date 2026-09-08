@@ -1,25 +1,16 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDate } from '../context/DateContext';
 import { useAuth } from '../context/AuthContext';
 import TodoList from '../components/TodoList';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import useHomeDashboard, { foodTotalsFromLog, mealItemCount } from '../hooks/useHomeDashboard';
-import { getDatePermission } from '../utils/activity';
+import { formatCalendarDisplay, getDatePermission, parseCalendarDate } from '../utils/activity';
 
 const greetingForHour = (h) => {
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';
   return 'Good evening';
-};
-
-const formatDisplayDate = (iso) => {
-  const [y, m, d] = String(iso).split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
 };
 
 const statusText = (value, yes, no) => {
@@ -29,15 +20,25 @@ const statusText = (value, yes, no) => {
 };
 
 const HomePage = () => {
-  const { selectedDate } = useDate();
+  const { selectedDate, setSelectedDate } = useDate();
+  const { date: routeDateParam } = useParams();
+  const parsedRouteDate = parseCalendarDate(routeDateParam);
+  const activeDate = parsedRouteDate || selectedDate;
+
+  useEffect(() => {
+    if (parsedRouteDate && parsedRouteDate !== selectedDate) {
+      setSelectedDate(parsedRouteDate);
+    }
+  }, [parsedRouteDate, selectedDate, setSelectedDate]);
+
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { todos, food, room, money, streak, activityRefreshKey, refreshTodos } = useHomeDashboard(selectedDate);
+  const { todos, food, room, money, streak, activityRefreshKey, refreshTodos } = useHomeDashboard(activeDate);
 
   const greet = greetingForHour(new Date().getHours());
-  const datePermission = getDatePermission(selectedDate);
+  const datePermission = getDatePermission(activeDate);
   const isToday = datePermission === 'today';
-  const displayDate = formatDisplayDate(selectedDate);
+  const displayDate = formatCalendarDisplay(activeDate);
 
   const todoItems = todos.items || [];
   const todoCompleted = todoItems.filter((t) => t.completed).length;
@@ -108,7 +109,7 @@ const HomePage = () => {
       <div className="home-grid">
         <div className="main-col">
           <TodoList
-            selectedDate={selectedDate}
+            selectedDate={activeDate}
             todos={todoItems}
             loading={todos.loading}
             error={todos.error}

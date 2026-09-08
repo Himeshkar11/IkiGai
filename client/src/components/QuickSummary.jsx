@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDate } from '../context/DateContext';
 import * as moneyService from '../services/moneyService';
+import { formatCalendarDisplay } from '../utils/activity';
 
 const QuickSummary = () => {
   const { selectedDate } = useDate();
@@ -29,7 +30,7 @@ const QuickSummary = () => {
     <div className="card summary-card">
       <div className="summary-head">
         <h3>Daily Summary</h3>
-        <div className="summary-date">{new Date(selectedDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</div>
+        <div className="summary-date">{formatCalendarDisplay(selectedDate, { month: 'long', day: 'numeric' })}</div>
       </div>
       <div className="summary-grid">
         <div className="overview-card" onClick={() => { window.location.href = '/food'; }}>
