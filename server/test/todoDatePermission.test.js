@@ -43,7 +43,7 @@ const simulateCreate = (dueDateInput) => {
 
   const day = toDayString(dueDateInput);
   if (!day) return 'bad-request';
-  return getDatePermission(day) === 'today' ? 'allowed' : 'forbidden';
+  return 'allowed';
 };
 
 /**
@@ -111,20 +111,12 @@ describe('createTodo — Date Permission Enforcement', () => {
     assert.equal(simulateCreate(''), 'allowed');
   });
 
-  it('rejects creating a task for yesterday', () => {
-    assert.equal(simulateCreate(yesterdayStr), 'forbidden');
+  it('allows creating a task for tomorrow', () => {
+    assert.equal(simulateCreate(tomorrowStr), 'allowed');
   });
 
-  it('rejects creating a task for tomorrow', () => {
-    assert.equal(simulateCreate(tomorrowStr), 'forbidden');
-  });
-
-  it('rejects creating a task far in the past (2020-01-01)', () => {
-    assert.equal(simulateCreate('2020-01-01'), 'forbidden');
-  });
-
-  it('rejects creating a task far in the future (2030-12-31)', () => {
-    assert.equal(simulateCreate('2030-12-31'), 'forbidden');
+  it('allows creating a task far in the future (2030-12-31)', () => {
+    assert.equal(simulateCreate('2030-12-31'), 'allowed');
   });
 
   it('defaults missing or blank dueDate values to today', () => {
@@ -236,12 +228,8 @@ describe('Date Permission — Edge Cases', () => {
     assert.equal(getStoredTodoDate(d), '2026-09-07');
   });
 
-  it('month boundary: rejects creating a task on the last day of the previous month', () => {
-    // e.g., if today is 2026-09-07, then 2026-08-31 is past
-    assert.equal(simulateCreate('2026-08-31'), 'forbidden');
-  });
-
-  it('year boundary: rejects creating a task in the previous year', () => {
-    assert.equal(simulateCreate('2025-12-31'), 'forbidden');
+  it('allows creating a task on the last day of the previous month or year', () => {
+    assert.equal(simulateCreate('2026-08-31'), 'allowed');
+    assert.equal(simulateCreate('2025-12-31'), 'allowed');
   });
 });

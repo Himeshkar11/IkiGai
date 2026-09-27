@@ -28,9 +28,10 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
 
   // Derived permission flags — single place to check mutability.
   const canEdit = datePermission === 'today';
+  const canAdd = datePermission === 'today' || datePermission === 'future';
 
   const addTask = async () => {
-    if (!input.trim() || !canEdit) return;
+    if (!input.trim() || !canAdd) return;
     setSaving(true);
     try {
       await todoService.createTodo({
@@ -119,12 +120,12 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
       )}
       {datePermission === 'future' && (
         <div className="date-lock-banner date-lock-future">
-          🔒 Future date — Tasks cannot be created or modified yet.
+          Future date — Tasks can be planned ahead. Completion and editing will become active on that day.
         </div>
       )}
 
-      {/* Add/Edit form — only rendered for today */}
-      {canEdit && (
+      {/* Add/Edit form — rendered for adding (today/future) and editing (today) */}
+      {(canAdd || (editing && canEdit)) && (
         <div className="todo-form">
           <input
             className="task-input"

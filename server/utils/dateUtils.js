@@ -127,8 +127,10 @@ const getLogicalToday = () => getLogicalDate(new Date());
  * @param {string} dateString - A YYYY-MM-DD date string representing the task's day.
  * @returns {'past'|'today'|'future'}
  */
-const getDatePermission = (dateString) => {
-  const today = getLogicalToday();
+const getDatePermission = (dateString, referenceToday) => {
+  const today = (typeof referenceToday === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(referenceToday.trim()))
+    ? referenceToday.trim()
+    : getLogicalToday();
   if (!dateString || !today) return 'past'; // safe fallback — treat unknown as read-only
   if (dateString < today) return 'past';
   if (dateString > today) return 'future';

@@ -9,6 +9,14 @@ const {
 
 const DATE_LOCK_MSG = 'Tasks can only be modified for the current day.';
 
+const getClientToday = (req) => {
+  const header = req.headers['x-client-today'] || req.headers['x-client-date'];
+  if (header && /^\d{4}-\d{2}-\d{2}$/.test(String(header).trim())) {
+    return String(header).trim();
+  }
+  return getLogicalToday();
+};
+
 const pad = (n) => String(n).padStart(2, '0');
 
 const toDayString = (value) => {
@@ -93,11 +101,6 @@ const createTodo = async (req, res, next) => {
     if (!priority) {
       return res.status(400).json({ success: false, message: 'Priority must be low, medium, or high' });
     }
-    // Date-permission guard: allow a normal create request to default to today,
-    // while still refusing legacy or explicit past/future dates.
-    if (explicitDay && getDatePermission(explicitDay) !== 'today') {
-      return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
-    }
 
     const completed = Boolean(req.body.completed);
     let completedAt = null;
@@ -148,9 +151,10 @@ const updateTodo = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Todo not found' });
     }
 
+    const clientToday = getClientToday(req);
     // Date-permission guard: the task must belong to today's logical date.
     const taskDate = getStoredTodoDate(currentTodo.dueDate);
-    if (getDatePermission(taskDate) !== 'today') {
+    if (getDatePermission(taskDate, clientToday) !== 'today') {
       return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
     }
 
@@ -161,7 +165,7 @@ const updateTodo = async (req, res, next) => {
       if (!newDay) {
         return res.status(400).json({ success: false, message: 'A valid dueDate (YYYY-MM-DD) is required' });
       }
-      if (getDatePermission(newDay) !== 'today') {
+      if (getDatePermission(newDay, clientToday) !== 'today') {
         return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
       }
     }
@@ -225,8 +229,9 @@ const deleteTodo = async (req, res, next) => {
     if (!todo) {
       return res.status(404).json({ success: false, message: 'Todo not found' });
     }
+    const clientToday = getClientToday(req);
     const taskDate = getStoredTodoDate(todo.dueDate);
-    if (getDatePermission(taskDate) !== 'today') {
+    if (getDatePermission(taskDate, clientToday) !== 'today') {
       return res.status(403).json({ success: false, message: DATE_LOCK_MSG });
     }
 

@@ -5,12 +5,22 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Add auth token interceptor
+import { getLogicalToday } from '../utils/activity';
+
+// Add auth token and client date interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    try {
+      const clientToday = getLogicalToday();
+      if (clientToday) {
+        config.headers['X-Client-Today'] = clientToday;
+      }
+    } catch {
+      // ignore
     }
     return config;
   },
