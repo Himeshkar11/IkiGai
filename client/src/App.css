@@ -45,7 +45,7 @@
   --sidebar-bg: #111827;
   --sidebar-text: #f8fafc;
   --sidebar-border: rgba(255,255,255,.06);
-  --sidebar-shadow: var(--sidebar-shadow);
+  --sidebar-shadow: rgba(15, 23, 42, .08);
   --sidebar-subtle: #9aa6bb;
   --sidebar-muted: #aeb8ca;
   --sidebar-user: #d8dfeb;
@@ -141,11 +141,16 @@
 .nav-item:hover { background:var(--sidebar-border); color:var(--sidebar-text); }
 .nav-item.active { background:var(--sidebar-surface); color:var(--sidebar-text); box-shadow:inset 3px 0 0 var(--sidebar-active-indicator); }
 .nav-icon { width:22px; text-align:center; font-size:17px; }
-.sidebar-footer { margin-top:auto; padding-top:16px; border-top:1px solid var(--sidebar-border); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.sidebar-footer { margin-top:auto; padding-top:16px; border-top:1px solid var(--sidebar-border); display:flex; flex-direction:column; gap:10px; }
+.sidebar-user-block { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .user-row { min-width:0; display:flex; align-items:center; gap:8px; }
 .user-name { max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--sidebar-user); font-size:12px; }
 .user-emoji { width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:var(--sidebar-surface); }
 .footer-actions { display:flex; gap:5px; align-items:center; }
+.sidebar-legal-links { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--sidebar-subtle); padding-top:2px; }
+.sidebar-legal-link { color:var(--sidebar-subtle); text-decoration:none; transition:color .15s ease; }
+.sidebar-legal-link:hover { color:var(--sidebar-text); }
+.sidebar-legal-dot { opacity:.4; }
 .icon-btn, .ghost-btn { border:0; cursor:pointer; }
 .icon-btn { width:32px; height:32px; border-radius:9px; color:var(--sidebar-control); background:transparent; }
 .icon-btn:hover { background:var(--sidebar-border); color:var(--sidebar-text); }
@@ -437,6 +442,27 @@ button.activity-cell:hover:not(:disabled) { transform: scale(1.18); z-index: 2; 
 .auth-submit { width:100%; margin-top:2px; }
 .auth-footer { margin:20px 0 0; text-align:center; color:var(--muted); font-size:12px; }
 .auth-footer a { color:var(--primary); font-weight:750; text-decoration:none; }
+.auth-legal { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; font-size:11px; color:var(--muted); }
+.auth-legal a { color:var(--muted); text-decoration:none; transition:color .15s ease; }
+.auth-legal a:hover { color:var(--primary); text-decoration:underline; }
+.auth-legal-dot { opacity:.4; }
+
+/* Content wrapper & App footer */
+.content-wrapper { flex:1; min-width:0; display:flex; flex-direction:column; min-height:100vh; }
+.app-footer { margin-top:auto; padding:20px clamp(18px, 4vw, 48px); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; border-top:1px solid var(--border); color:var(--muted); font-size:12px; }
+.app-footer-left { display:flex; align-items:center; gap:6px; }
+.app-footer-right { display:flex; align-items:center; gap:8px; }
+.footer-link { color:var(--muted); text-decoration:none; transition:color .15s ease; }
+.footer-link:hover { color:var(--text); text-decoration:underline; }
+.footer-dot { color:var(--border-strong); }
+
+/* Legal pages */
+.legal-page { max-width:880px; margin:0 auto; line-height:1.65; }
+.legal-content { display:flex; flex-direction:column; gap:22px; margin-top:12px; }
+.legal-section h2 { font-size:16px; font-weight:750; margin:0 0 8px; color:var(--text); letter-spacing:-.02em; }
+.legal-section p { color:var(--muted); font-size:13.5px; margin:0 0 10px; line-height:1.6; }
+.legal-section ul { margin:0 0 12px 18px; padding:0; color:var(--muted); font-size:13.5px; display:flex; flex-direction:column; gap:6px; line-height:1.55; }
+.legal-section li strong { color:var(--text); }
 
 @media (max-width:1100px) {
   .sidebar { width:210px; flex-basis:210px; }
@@ -452,6 +478,7 @@ button.activity-cell:hover:not(:disabled) { transform: scale(1.18); z-index: 2; 
   .nav-item.active { box-shadow:inset 0 -3px 0 var(--sidebar-active-indicator); }
   .nav-label { font-size:12px; }
   .sidebar-footer { position:absolute; right:12px; top:12px; margin:0; padding:0; border:0; }
+  .sidebar-legal-links { display:none; }
   .user-row { display:none; }
   .content-area { padding:22px 16px 36px; }
   .home-grid,.money-layout { grid-template-columns:1fr; }

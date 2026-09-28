@@ -13,6 +13,8 @@ import RegisterPage from './pages/RegisterPage';
 import MoneyPage from './pages/MoneyPage';
 import NotFoundPage from './pages/NotFoundPage';
 import RoomPage from './pages/RoomPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import { formatStatus } from './utils/format';
 import './App.css';
 
@@ -84,29 +86,39 @@ const AppShell = () => {
             </AuthRoute>
           }
         />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
 
-  const statusText =
-    healthStatus?.status === 'ok'
-      ? `API ${formatStatus(healthStatus.status)}`
-      : `API ${formatStatus(healthStatus?.status || 'checking')}`;
+  const isHealthy = healthStatus?.status?.toLowerCase() === 'ok';
+  const statusText = isHealthy
+    ? `API ${formatStatus(healthStatus.status)}`
+    : `API ${formatStatus(healthStatus?.status || 'checking')}`;
+
+  const getHeaderTitle = () => {
+    const p = location.pathname;
+    if (p === '/' || p === '/home') return 'Today';
+    if (p === '/privacy') return 'Privacy Policy';
+    if (p === '/terms') return 'Terms & Conditions';
+    return p.slice(1).replace(/-/g, ' ');
+  };
 
   return (
     <Layout>
       <header className="topbar">
         <div className="topbar-left">
-          <p className="topbar-title">{location.pathname === '/' || location.pathname === '/home' ? 'Today' : location.pathname.slice(1).replace(/-/g, ' ')}</p>
+          <p className="topbar-title">{getHeaderTitle()}</p>
         </div>
         <div className="topbar-right">
           <ThemeToggle />
           <div
-            className={`status-pill ${healthStatus?.status === 'ok' ? 'online' : 'offline'}`}
+            className={`status-pill ${isHealthy ? 'online' : 'offline'}`}
             title={statusText}
           >
-            {healthStatus?.status === 'ok' ? 'API • OK' : 'API • Issue'}
+            {isHealthy ? 'API • OK' : 'API • Issue'}
           </div>
         </div>
       </header>
@@ -185,6 +197,8 @@ const AppShell = () => {
             </ProtectedRoute>
           }
         />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="/not-found" element={<NotFoundPage />} />
         <Route path="*" element={<Navigate to="/not-found" replace />} />
       </Routes>

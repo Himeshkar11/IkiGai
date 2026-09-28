@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "cleanup": "node scripts/monthlyCleanup.js",
+    "cleanup:dry-run": "node scripts/monthlyCleanup.js --dry-run",
+    "keep-alive": "node scripts/keepAlive.js",
+    "keep-alive:once": "node scripts/keepAlive.js --once"
   },
   "keywords": [],
   "author": "",

@@ -5,21 +5,9 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(() => localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Initialize from localStorage on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem('authToken');
-    if (storedToken) {
-      setToken(storedToken);
-      // Verify token by fetching user info
-      fetchCurrentUser(storedToken);
-    } else {
-      setLoading(false);
-    }
-  }, []);
 
   // Fetch current user info
   const fetchCurrentUser = async (authToken) => {
@@ -34,8 +22,7 @@ export const AuthProvider = ({ children }) => {
         setUser(response.data.user);
         setError(null);
       }
-    } catch (err) {
-      console.error('Failed to fetch user:', err);
+    } catch (_err) {
       localStorage.removeItem('authToken');
       setToken(null);
       setUser(null);
@@ -44,6 +31,16 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  // Initialize from localStorage on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken) {
+      fetchCurrentUser(storedToken);
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
   // Register user
   const register = async (email, password, name) => {

@@ -1,0 +1,32 @@
+name: Production Keep-Alive Health Check
+
+on:
+  schedule:
+    # Trigger every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  ping-health:
+    name: Ping Production Health Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send HTTP GET to Lightweight /health Endpoint
+        run: |
+          TARGET_URL="${{ secrets.PRODUCTION_APP_URL || secrets.HEALTH_CHECK_URL }}"
+          if [ -z "$TARGET_URL" ]; then
+            echo "::notice ::PRODUCTION_APP_URL secret is not yet set. Skipping health check ping."
+            exit 0
+          fi
+          
+          # Ensure URL ends with /health
+          HEALTH_URL="${TARGET_URL%/}/health"
+          echo "Pinging health endpoint: $HEALTH_URL"
+          
+          # Send lightweight GET request with 5s timeout and silent success
+          RESPONSE=$(curl -s -f -m 5 "$HEALTH_URL") || {
+            echo "::error ::Health check failed for $HEALTH_URL"
+            exit 1
+          }
+          
+          echo "Health response: $RESPONSE"

@@ -6,6 +6,12 @@ import TodoList from '../components/TodoList';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import useHomeDashboard, { foodTotalsFromLog, mealItemCount } from '../hooks/useHomeDashboard';
 import { formatCalendarDisplay, getDatePermission, parseCalendarDate } from '../utils/activity';
+import {
+  TasksIcon,
+  FoodIcon,
+  RoomIcon,
+  MoneyIcon,
+} from '../components/Icons';
 
 const greetingForHour = (h) => {
   if (h < 12) return 'Good morning';
@@ -53,58 +59,85 @@ const HomePage = () => {
 
   return (
     <div className="page-card home-page">
-      <div className="page-head home-hero">
+      <header className="page-head home-hero">
         <div>
-          <h1>{greet}{user?.name ? `, ${user.name} ` : ' '}👋</h1>
+          <h1>{greet}{user?.name ? `, ${user.name}` : ''}</h1>
           <div className="home-hero-date">{displayDate}</div>
           <p className="home-hero-copy">
-            {isToday ? "Let's make today count." : 'Viewing this day across every module.'}
+            {isToday ? 'Daily executive overview across all life domains.' : `Historical archive view for ${displayDate}.`}
           </p>
         </div>
-      </div>
+      </header>
 
-      
-
-      <div className="overview-cards">
-        <div className="overview-card" onClick={() => navigate('/')}>
-          <div className="overview-icon">☐</div>
+      <section className="overview-cards" aria-label="Domain metrics overview">
+        <button
+          type="button"
+          className="overview-card"
+          onClick={() => navigate('/')}
+          aria-label={`Tasks: ${todoCompleted} of ${todoItems.length} completed`}
+        >
+          <div className="overview-icon" aria-hidden="true">
+            <TasksIcon size={18} />
+          </div>
           <div>
             <div className="overview-value">
               {todos.loading ? '…' : `${todoCompleted} / ${todoItems.length}`}
             </div>
-            <div className="overview-label">TODOS</div>
+            <div className="overview-label">TASKS COMPLETED</div>
           </div>
-        </div>
-        <div className="overview-card" onClick={() => navigate('/food')}>
-          <div className="overview-icon">🍎</div>
+        </button>
+
+        <button
+          type="button"
+          className="overview-card"
+          onClick={() => navigate('/food')}
+          aria-label={`Food: ${Math.round(foodTotals.calories)} calories recorded`}
+        >
+          <div className="overview-icon" aria-hidden="true">
+            <FoodIcon size={18} />
+          </div>
           <div>
             <div className="overview-value">
               {food.loading ? '…' : `${Math.round(foodTotals.calories)} kcal`}
             </div>
-            <div className="overview-label">FOOD</div>
+            <div className="overview-label">CALORIE INTAKE</div>
           </div>
-        </div>
-        <div className="overview-card" onClick={() => navigate('/room')}>
-          <div className="overview-icon">🏠</div>
+        </button>
+
+        <button
+          type="button"
+          className="overview-card"
+          onClick={() => navigate('/room')}
+          aria-label={`Room: ${roomAnswered} of 3 routines recorded`}
+        >
+          <div className="overview-icon" aria-hidden="true">
+            <RoomIcon size={18} />
+          </div>
           <div>
             <div className="overview-value">
               {room.loading ? '…' : `${roomAnswered} / 3`}
             </div>
-            <div className="overview-label">ROOM</div>
+            <div className="overview-label">SPACE CHECK-IN</div>
           </div>
-        </div>
-        <div className="overview-card" onClick={() => navigate('/money')}>
-          <div className="overview-icon">₹</div>
+        </button>
+
+        <button
+          type="button"
+          className="overview-card"
+          onClick={() => navigate('/money')}
+          aria-label={`Finances: ₹${money.total} logged`}
+        >
+          <div className="overview-icon" aria-hidden="true">
+            <MoneyIcon size={18} />
+          </div>
           <div>
             <div className="overview-value">
               {money.loading ? '…' : `₹${money.total}`}
             </div>
-            <div className="overview-label">{isToday ? "TODAY'S SPENDING" : 'SPENDING'}</div>
+            <div className="overview-label">{isToday ? "TODAY'S SPENDING" : 'DAY SPENDING'}</div>
           </div>
-        </div>
-      </div>
-
-      
+        </button>
+      </section>
 
       <div className="home-grid">
         <div className="main-col">
@@ -119,59 +152,59 @@ const HomePage = () => {
 
           <ActivityHeatmap streak={streak} refreshKey={activityRefreshKey} />
 
-          <div className="home-modules">
-            <section className="card home-module">
+          <section className="home-modules" aria-label="Quick domain modules">
+            <div className="card home-module">
               <div className="home-module-head">
-                <h4>Food</h4>
+                <h4>Food & Nutrition</h4>
                 <button type="button" className="link" onClick={() => navigate('/food')}>Open</button>
               </div>
               {food.loading ? (
-                <p className="muted">Loading food…</p>
+                <p className="muted">Loading nutritional log…</p>
               ) : food.error ? (
                 <p className="muted">{food.error}</p>
               ) : foodCount === 0 ? (
                 <div className="empty-state compact">
-                  <strong>No food logged</strong>
-                  <p className="muted">Nothing recorded for this day.</p>
+                  <strong>No entries recorded</strong>
+                  <p className="muted">Nothing logged for this date yet.</p>
                 </div>
               ) : (
                 <div className="home-nutrition">
-                  <div><span>Calories</span><strong>{Math.round(foodTotals.calories)}</strong></div>
+                  <div><span>Calories</span><strong>{Math.round(foodTotals.calories)} kcal</strong></div>
                   <div><span>Protein</span><strong>{Math.round(foodTotals.protein)}g</strong></div>
                   <div><span>Carbs</span><strong>{Math.round(foodTotals.carbs)}g</strong></div>
                   <div><span>Fat</span><strong>{Math.round(foodTotals.fat)}g</strong></div>
                   <div><span>Fiber</span><strong>{Math.round(foodTotals.fiber)}g</strong></div>
                 </div>
               )}
-            </section>
+            </div>
 
-            <section className="card home-module">
+            <div className="card home-module">
               <div className="home-module-head">
-                <h4>Room</h4>
+                <h4>Room & Environment</h4>
                 <button type="button" className="link" onClick={() => navigate('/room')}>Open</button>
               </div>
               {room.loading ? (
-                <p className="muted">Loading room…</p>
+                <p className="muted">Loading space status…</p>
               ) : room.error ? (
                 <p className="muted">{room.error}</p>
               ) : roomAnswered === 0 ? (
                 <div className="empty-state compact">
-                  <strong>No room status</strong>
-                  <p className="muted">Water, room, and clothes are not set for this day.</p>
+                  <strong>Check-in incomplete</strong>
+                  <p className="muted">Drinking water, room tidiness, and laundry not yet recorded.</p>
                 </div>
               ) : (
                 <ul className="home-status-list">
                   <li><span>Water</span><strong>{statusText(roomStatus.waterAvailable, 'Available', 'Unavailable')}</strong></li>
-                  <li><span>Room</span><strong>{statusText(roomStatus.roomClean, 'Clean', 'Not clean')}</strong></li>
+                  <li><span>Room</span><strong>{statusText(roomStatus.roomClean, 'Clean', 'Needs attention')}</strong></li>
                   <li><span>Clothes</span><strong>{statusText(roomStatus.clothesReady, 'Ready', 'Not ready')}</strong></li>
-                  <li><span>Completion</span><strong>{roomAnswered} / 3</strong></li>
+                  <li><span>Check-in</span><strong>{roomAnswered} / 3 answered</strong></li>
                 </ul>
               )}
-            </section>
+            </div>
 
-            <section className="card home-module">
+            <div className="card home-module">
               <div className="home-module-head">
-                <h4>Money</h4>
+                <h4>Finances & Spending</h4>
                 <button type="button" className="link" onClick={() => navigate('/money')}>Open</button>
               </div>
               {money.loading ? (
@@ -180,17 +213,17 @@ const HomePage = () => {
                 <p className="muted">{money.error}</p>
               ) : moneyCount === 0 ? (
                 <div className="empty-state compact">
-                  <strong>No spending</strong>
-                  <p className="muted">No transactions for this day.</p>
+                  <strong>No transactions</strong>
+                  <p className="muted">No expenses recorded for this date.</p>
                 </div>
               ) : (
                 <ul className="home-status-list">
-                  <li><span>{isToday ? "Today's spending" : 'Spending'}</span><strong>₹{money.total}</strong></li>
+                  <li><span>Total Logged</span><strong>₹{money.total}</strong></li>
                   <li><span>Transactions</span><strong>{moneyCount}</strong></li>
                 </ul>
               )}
-            </section>
-          </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>

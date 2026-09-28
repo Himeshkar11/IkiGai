@@ -27,6 +27,10 @@ export default function LoginPage() {
     }
   };
 
+  React.useEffect(() => {
+    document.title = 'Sign In | IkiGai';
+  }, []);
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -52,8 +56,13 @@ export default function LoginPage() {
         </form>
 
         <p className="auth-footer">Don&apos;t have an account? <Link to="/register">Create one</Link></p>
+
+        <div className="auth-legal">
+          <Link to="/privacy">Privacy Policy</Link>
+          <span className="auth-legal-dot" aria-hidden="true">·</span>
+          <Link to="/terms">Terms & Conditions</Link>
+        </div>
       </div>
     </div>
   );
-
 }

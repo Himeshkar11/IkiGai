@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import * as todoService from '../services/todoService';
+import { LockIcon, PlusIcon } from './Icons';
 
 const priorityLabel = (p) => {
-  if (p === 'low') return 'Low';
-  if (p === 'high') return 'High';
-  return 'Medium';
+  if (p === 'low') return 'Low priority';
+  if (p === 'high') return 'High priority';
+  return 'Medium priority';
 };
 
 /**
@@ -17,14 +18,13 @@ const priorityLabel = (p) => {
  *   error           – string or null
  *   onChanged       – callback called after any mutation
  *   datePermission  – 'past' | 'today' | 'future'
- *                     Controls whether mutation controls are shown.
- *                     If omitted, defaults to 'today' to avoid accidental lockout.
  */
 const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermission = 'today' }) => {
   const [editing, setEditing] = useState(null);
   const [input, setInput] = useState('');
   const [priority, setPriority] = useState('');
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState(null);
 
   // Derived permission flags — single place to check mutability.
   const canEdit = datePermission === 'today';
@@ -33,6 +33,7 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
   const addTask = async () => {
     if (!input.trim() || !canAdd) return;
     setSaving(true);
+    setFormError(null);
     try {
       await todoService.createTodo({
         title: input.trim(),
@@ -43,16 +44,17 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
       setInput('');
       setPriority('');
       await onChanged?.();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to add task.');
     } finally {
       setSaving(false);
     }
   };
 
   const updateTask = async (id) => {
-    if (!canEdit) return;
+    if (!canEdit || !input.trim()) return;
     setSaving(true);
+    setFormError(null);
     try {
       await todoService.updateTodo(id, {
         title: input.trim(),
@@ -62,8 +64,8 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
       setInput('');
       setPriority('');
       await onChanged?.();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to update task.');
     } finally {
       setSaving(false);
     }
@@ -74,8 +76,8 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
     try {
       await todoService.deleteTodo(id);
       await onChanged?.();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to delete task.');
     }
   };
 
@@ -84,92 +86,149 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
     try {
       await todoService.updateTodo(todo._id, { completed: !todo.completed });
       await onChanged?.();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      setFormError(err.response?.data?.message || 'Failed to toggle task.');
     }
   };
 
   const completedCount = todos.filter((t) => t.completed).length;
   const progress = todos.length ? Math.round((completedCount / todos.length) * 100) : 0;
 
-  if (loading) return <div className="card">Loading tasks…</div>;
-  if (error) return <div className="card error">{error}</div>;
+  if (loading) {
+    return (
+      <div className="card todo-card">
+        <p className="muted" style={{ margin: '14px 0', textAlign: 'center' }}>Loading tasks…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="card error">{error}</div>;
+  }
 
   return (
-    <div className="card todo-card">
+    <section className="card todo-card" aria-labelledby="todo-card-title">
       <div className="todo-header">
         <div>
-          <h3>{datePermission === 'today' ? "Today's Tasks" : 'Tasks'}</h3>
+          <h3 id="todo-card-title">{datePermission === 'today' ? "Today's Tasks" : 'Tasks'}</h3>
           <div className="todo-sub">
             {datePermission === 'today'
-              ? 'Auto-assigned to today'
-              : `${completedCount} completed · ${todos.length - completedCount} remaining`}
+              ? 'Active tasks assigned to today'
+              : `${completedCount} completed · ${todos.length - completedCount} pending`}
           </div>
         </div>
         <div className="todo-meta">
-          <div className="progress-text">{completedCount} / {todos.length} completed</div>
-          <div className="progress-bar"><div className="progress-fill" style={{ width: `${progress}%` }} /></div>
+          <div className="progress-text">{completedCount} of {todos.length} completed</div>
+          <div className="progress-bar" role="progressbar" aria-valuenow={progress} aria-valuemin="0" aria-valuemax="100">
+            <div className="progress-fill" style={{ width: `${progress}%` }} />
+          </div>
         </div>
       </div>
 
+      {formError && <div className="card error" style={{ margin: '10px 0' }} role="alert">{formError}</div>}
+
       {/* Read-only / locked banner for non-today dates */}
       {datePermission === 'past' && (
-        <div className="date-lock-banner date-lock-past">
-          🔒 Historical · Read Only — Tasks from this day cannot be modified.
+        <div className="date-lock-banner date-lock-past" role="status">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <LockIcon size={14} /> Historical archive · Read-only. Past records cannot be altered.
+          </span>
         </div>
       )}
       {datePermission === 'future' && (
-        <div className="date-lock-banner date-lock-future">
-          Future date — Tasks can be planned ahead. Completion and editing will become active on that day.
+        <div className="date-lock-banner date-lock-future" role="status">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <LockIcon size={14} /> Future date · Tasks can be planned ahead. Completion controls activate on that day.
+          </span>
         </div>
       )}
 
       {/* Add/Edit form — rendered for adding (today/future) and editing (today) */}
       {(canAdd || (editing && canEdit)) && (
-        <div className="todo-form">
+        <form
+          className="todo-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (editing) updateTask(editing);
+            else addTask();
+          }}
+        >
           <input
             className="task-input"
-            placeholder="Add task"
+            placeholder={editing ? 'Update task title' : 'Add task to focus list'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             aria-label="Task title"
           />
           <div className="form-controls">
-            <select value={priority} onChange={(e) => setPriority(e.target.value)} aria-label="Task priority">
-              <option value="">Priority</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              aria-label="Task priority"
+            >
+              <option value="">Priority: Normal</option>
+              <option value="low">Low priority</option>
+              <option value="medium">Medium priority</option>
+              <option value="high">High priority</option>
             </select>
             {editing ? (
-              <button className="btn primary" disabled={saving} onClick={() => updateTask(editing)}>Save</button>
+              <>
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={saving || !input.trim()}
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => {
+                    setEditing(null);
+                    setInput('');
+                    setPriority('');
+                  }}
+                >
+                  Cancel
+                </button>
+              </>
             ) : (
-              <button className="btn primary" disabled={saving} onClick={addTask}>+ Add Task</button>
+              <button
+                type="submit"
+                className="btn primary"
+                disabled={saving || !input.trim()}
+              >
+                <PlusIcon size={14} /> {saving ? 'Adding…' : 'Add Task'}
+              </button>
             )}
           </div>
-        </div>
+        </form>
       )}
 
       <div className="todo-section">
         {todos.length === 0 ? (
           <div className="empty-state">
-            <strong>No tasks yet</strong>
+            <strong>No tasks scheduled</strong>
             <p className="muted">
               {datePermission === 'today'
-                ? 'Nothing planned for this day. Add something you want to finish.'
-                : 'No tasks were recorded for this day.'}
+                ? 'Your list is clear. Add items you need to focus on today.'
+                : 'No tasks were logged for this day.'}
             </p>
           </div>
         ) : (
-          <ul className="todo-list">
+          <ul className="todo-list" aria-label="Task list">
             {todos.map((t) => (
-              <li key={t._id} className={`todo-item ${t.completed ? 'completed' : ''} ${!canEdit ? 'read-only' : ''}`}>
+              <li
+                key={t._id}
+                className={`todo-item ${t.completed ? 'completed' : ''} ${!canEdit ? 'read-only' : ''}`}
+              >
                 <label className={`checkbox ${!canEdit ? 'checkbox-disabled' : ''}`}>
                   <input
                     type="checkbox"
                     checked={t.completed}
                     onChange={() => toggleComplete(t)}
                     disabled={!canEdit}
+                    aria-label={`Mark "${t.title}" as ${t.completed ? 'incomplete' : 'complete'}`}
                   />
                   <span className="checkmark" />
                 </label>
@@ -177,20 +236,26 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
                   <div className="todo-title">{t.title}</div>
                   <div className="todo-meta-small">{priorityLabel(t.priority)}</div>
                 </div>
-                {/* Edit/Delete actions only shown for today */}
                 {canEdit && (
                   <div className="actions">
                     <button
+                      type="button"
                       className="link"
                       onClick={() => {
                         setEditing(t._id);
                         setInput(t.title);
-                        setPriority(t.priority);
+                        setPriority(t.priority || '');
                       }}
                     >
                       Edit
                     </button>
-                    <button className="link danger" onClick={() => remove(t._id)}>Delete</button>
+                    <button
+                      type="button"
+                      className="link danger"
+                      onClick={() => remove(t._id)}
+                    >
+                      Delete
+                    </button>
                   </div>
                 )}
               </li>
@@ -198,7 +263,7 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
           </ul>
         )}
       </div>
-    </div>
+    </section>
   );
 };
 

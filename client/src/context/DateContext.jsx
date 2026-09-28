@@ -5,14 +5,8 @@ import { extractRouteDate, getLogicalToday, parseCalendarDate } from '../utils/a
 const DateContext = createContext();
 
 export const DateProvider = ({ children }) => {
-  let location = null;
-  let navigate = null;
-  try {
-    location = useLocation();
-    navigate = useNavigate();
-  } catch {
-    // Graceful fallback if rendered outside a react-router Router in isolated unit tests
-  }
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const routeDate = location ? extractRouteDate(location.pathname, location.search) : null;
   const [selectedDate, setSelectedDateState] = useState(() => routeDate || getLogicalToday());

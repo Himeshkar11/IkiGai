@@ -37,6 +37,20 @@ const monthlyTotalForUser = async (userId, day) => {
     },
     { $group: { _id: null, total: { $sum: '$amount' } } },
   ]);
+
+  if (agg?.total !== undefined && agg?.total > 0) {
+    return { month: key, monthlyTotal: agg.total };
+  }
+
+  // Check MonthlySummary if raw transactions for older months were pruned
+  try {
+    const MonthlySummary = require('../models/MonthlySummary');
+    const summary = await MonthlySummary.findOne({ userId, month: key }).lean();
+    if (summary?.money?.totalSpent !== undefined) {
+      return { month: key, monthlyTotal: summary.money.totalSpent };
+    }
+  } catch (_) {}
+
   return { month: key, monthlyTotal: agg?.total || 0 };
 };
 

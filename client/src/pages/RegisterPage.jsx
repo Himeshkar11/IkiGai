@@ -48,6 +48,10 @@ export default function RegisterPage() {
     }
   };
 
+  React.useEffect(() => {
+    document.title = 'Create Account | IkiGai';
+  }, []);
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -67,8 +71,13 @@ export default function RegisterPage() {
         </form>
 
         <p className="auth-footer">Already have an account? <Link to="/login">Sign in</Link></p>
+
+        <div className="auth-legal">
+          <Link to="/privacy">Privacy Policy</Link>
+          <span className="auth-legal-dot" aria-hidden="true">·</span>
+          <Link to="/terms">Terms & Conditions</Link>
+        </div>
       </div>
     </div>
   );
-
 }

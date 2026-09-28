@@ -27,10 +27,25 @@ const getMonthActivity = async (req, res, next) => {
 
     const activityByDate = await getCompletedActivity(req.user.userId, bounds.start, bounds.end);
     const today = getLogicalDate();
-    const activity = [...activityByDate.entries()]
+    let activity = [...activityByDate.entries()]
       .filter(([date]) => date.startsWith(month) && date <= today)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([date, count]) => ({ date, count }));
+
+    // If detailed records were archived by monthly retention, retrieve from MonthlySummary
+    if (activity.length === 0 && month < currentMonth) {
+      const MonthlySummary = require('../models/MonthlySummary');
+      const summary = await MonthlySummary.findOne({ userId: req.user.userId, month }).lean();
+      if (summary?.todos?.activityByDate) {
+        const entries = summary.todos.activityByDate instanceof Map
+          ? summary.todos.activityByDate.entries()
+          : Object.entries(summary.todos.activityByDate);
+        activity = [...entries]
+          .filter(([date]) => date.startsWith(month) && date <= today)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([date, count]) => ({ date, count: Number(count) || 0 }));
+      }
+    }
 
     res.status(200).json({
       success: true,

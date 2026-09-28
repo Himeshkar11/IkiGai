@@ -1,11 +1,11 @@
 const getHealthStatus = async () => {
   return {
-    status: 'OK',
-    message: 'IkiGai API is running',
+    status: 'ok',
+    message: 'IkiGai API is healthy and operational',
     timestamp: new Date().toISOString(),
   };
 };
 
 module.exports = {
   getHealthStatus,
-}; 
+};

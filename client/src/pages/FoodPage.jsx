@@ -20,13 +20,7 @@ const statFields = [
 ];
 
 
-const EmptyTotals = {
-  calories: 0,
-  protein: 0,
-  carbs: 0,
-  fat: 0,
-  fiber: 0,
-};
+
 
 const calculateFoodTotals = (foodLog) => {
   const totals = {
@@ -317,15 +311,6 @@ const FoodPage = () => {
   // Per-entry overflow menu / inline quantity edit.
   const [openMenuItemId, setOpenMenuItemId] = useState(null);
   const [editingItemId, setEditingItemId] = useState(null);
-  const [editQty, setEditQty] = useState(1);
-
-  useEffect(() => {
-    fetchLog(selectedDate);
-    setFormOpenFor(null);
-    setOpenMenuItemId(null);
-    setEditingItemId(null);
-  }, [selectedDate]);
-
   const fetchLog = async (date) => {
     setLoading(true);
     setError(null);
@@ -333,12 +318,19 @@ const FoodPage = () => {
     try {
       const res = await foodService.getFoodLogByDate(date);
       setFoodLog(res.foodLog || { meals: {} });
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to load food log');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchLog(selectedDate);
+    setFormOpenFor(null);
+    setOpenMenuItemId(null);
+    setEditingItemId(null);
+  }, [selectedDate]);
 
   const openForm = (mealKey) => {
     setFormMeal(mealKey || 'breakfast');
@@ -400,8 +392,6 @@ const FoodPage = () => {
           fiber: item.nutrition.fiber,
         };
 
-        console.log('Adding AI food:', payload);
-
         updatedLog = await foodService.addItemToMeal(
           selectedDate,
           formMeal,
@@ -443,7 +433,7 @@ const FoodPage = () => {
       );
 
       setFoodLog(updated);
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to remove item');
     }
   };
@@ -466,7 +456,7 @@ const FoodPage = () => {
       );
 
       setFoodLog(updated);
-    } catch (e) {
+    } catch (_e) {
       setError('Failed to update entry');
     } finally {
       setEditingItemId(null);
@@ -486,7 +476,7 @@ const FoodPage = () => {
     year: 'numeric',
   });
 
-  const renderForm = (mealKey) => (
+  const renderForm = () => (
     <AddFoodForm
       meal={formMeal}
       onMealChange={setFormMeal}

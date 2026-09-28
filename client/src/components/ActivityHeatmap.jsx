@@ -9,6 +9,7 @@ import {
   getMonthKey,
   toMonthDate,
 } from '../utils/activity';
+import { ChevronLeftIcon, ChevronRightIcon, FlameIcon } from './Icons';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -113,7 +114,7 @@ const ActivityHeatmap = ({ streak = {}, refreshKey = 0 }) => {
           aria-label="Previous month"
           title="Previous month"
         >
-          ‹
+          <ChevronLeftIcon size={13} />
         </button>
         <span className="activity-month-label">{formatMonth(month)}</span>
         <button
@@ -124,7 +125,7 @@ const ActivityHeatmap = ({ streak = {}, refreshKey = 0 }) => {
           aria-label="Next month"
           title="Next month"
         >
-          ›
+          <ChevronRightIcon size={13} />
         </button>
       </div>
 
@@ -189,7 +190,9 @@ const ActivityHeatmap = ({ streak = {}, refreshKey = 0 }) => {
           <span>More</span>
         </div>
         <div className="activity-supporting-stats">
-          <span>🔥 {streak.loading ? '…' : `${currentStreak} day streak`}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+            <FlameIcon size={13} /> {streak.loading ? '…' : `${currentStreak} day streak`}
+          </span>
           <span>Today: {streak.loading ? '…' : `${todayCompleted} done`}</span>
         </div>
       </div>

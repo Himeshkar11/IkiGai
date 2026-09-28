@@ -42,6 +42,14 @@ app.get('/', (req, res) => {
   });
 });
 
+// Lightweight production health check endpoint (sub-millisecond, no DB query)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // API Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
