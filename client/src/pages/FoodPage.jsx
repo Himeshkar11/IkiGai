@@ -3,24 +3,24 @@ import { useDate } from '../context/DateContext';
 import * as foodService from '../services/foodService';
 import { addDaysToDate, formatCalendarDisplay, getLogicalToday } from '../utils/activity';
 
+import { FoodIcon, RefreshCwIcon, DatabaseIcon } from '../components/Icons';
+import nutritionService from '../services/nutritionService';
+
 const meals = [
-  { key: 'breakfast', label: 'Breakfast', icon: '🍳' },
-  { key: 'morningSnack', label: 'Morning Snack', icon: '🥐' },
-  { key: 'lunch', label: 'Lunch', icon: '🥗' },
-  { key: 'eveningSnack', label: 'Evening Snack', icon: '🍪' },
-  { key: 'dinner', label: 'Dinner', icon: '🍽️' },
+  { key: 'breakfast', label: 'Breakfast', tag: 'Morning' },
+  { key: 'morningSnack', label: 'Morning Snack', tag: 'Snack' },
+  { key: 'lunch', label: 'Lunch', tag: 'Midday' },
+  { key: 'eveningSnack', label: 'Evening Snack', tag: 'Snack' },
+  { key: 'dinner', label: 'Dinner', tag: 'Evening' },
 ];
 
 const statFields = [
+  { key: 'calories', label: 'Calories', unit: 'kcal' },
   { key: 'protein', label: 'Protein', unit: 'g' },
   { key: 'carbs', label: 'Carbs', unit: 'g' },
   { key: 'fat', label: 'Fat', unit: 'g' },
   { key: 'fiber', label: 'Fiber', unit: 'g' },
-  { key: 'calories', label: 'Calories', unit: 'kcal' },
 ];
-
-
-
 
 const calculateFoodTotals = (foodLog) => {
   const totals = {
@@ -66,9 +66,13 @@ const AddFoodForm = ({
   aiPreview,
   onConfirmAI,
   onCancelAI,
+  onRefreshAI,
 }) => (
   <form className="add-food-form" onSubmit={onSubmit}>
-    <h3>Add Food</h3>
+    <div className="add-food-head">
+      <h3>Add Food</h3>
+      <span className="add-food-subhead">Estimate calories & protein</span>
+    </div>
 
     <label className="field">
       <span className="field-label">Meal</span>
@@ -80,7 +84,7 @@ const AddFoodForm = ({
       >
         {meals.map((m) => (
           <option key={m.key} value={m.key}>
-            {m.label}
+            {m.label} ({m.tag})
           </option>
         ))}
       </select>
@@ -93,7 +97,7 @@ const AddFoodForm = ({
 
           <textarea
             rows={2}
-            placeholder="e.g. 2 eggs, 200g rice and 150g chicken"
+            placeholder="e.g. 2 rotis, 1 cup dal, 100g paneer"
             value={description}
             onChange={(e) => onDescriptionChange(e.target.value)}
             autoFocus
@@ -116,16 +120,60 @@ const AddFoodForm = ({
             className="btn primary"
             disabled={aiAnalyzing || !description.trim()}
           >
-            {aiAnalyzing ? 'Analyzing…' : 'Analyze Food'}
+            {aiAnalyzing ? 'Analyzing…' : 'Estimate Nutrition'}
           </button>
         </div>
       </>
     ) : (
       <div className="ai-food-preview">
-        <h4>AI Nutrition Estimate</h4>
+        <div className="ai-preview-header">
+          <div className="ai-preview-title-wrap">
+            <h4>Estimated Nutrition</h4>
+            {aiPreview.source && (
+              <span
+                className="cache-pill"
+                title={
+                  aiPreview.source === 'seed'
+                    ? 'Tier 1: Retrieved from local Indian staples database'
+                    : aiPreview.source === 'client-cache'
+                    ? 'Tier 1: Retrieved from client IndexedDB cache'
+                    : aiPreview.source === 'server-cache'
+                    ? 'Tier 2: Retrieved from server-side MongoDB cache'
+                    : 'Tier 3: Fresh estimation from AI'
+                }
+              >
+                <span className="cache-pill-dot" />{' '}
+                {aiPreview.source === 'seed'
+                  ? 'Instant • Seed'
+                  : aiPreview.source === 'client-cache'
+                  ? 'Instant • Client Cache'
+                  : aiPreview.source === 'server-cache'
+                  ? 'Server Cache'
+                  : 'AI Estimate'}
+              </span>
+            )}
+          </div>
 
-        <p className="muted">
-          Nutrition values are approximate estimates based on what you entered.
+          <button
+            type="button"
+            className="btn-refresh-cache"
+            onClick={onRefreshAI}
+            disabled={aiAnalyzing}
+            title="Bypass cache and get a fresh calculation from AI"
+          >
+            <RefreshCwIcon size={12} className={aiAnalyzing ? 'spin' : ''} />
+            <span>{aiAnalyzing ? 'Re-fetching…' : 'Refresh from AI'}</span>
+          </button>
+        </div>
+
+        {aiPreview.isFallback && (
+          <div className="ai-fallback-notice">
+            <span>{aiPreview.fallbackNote}</span>
+          </div>
+        )}
+
+        <p className="muted" style={{ fontSize: '11.5px', margin: '4px 0 10px' }}>
+          Approximate nutritional values. Edit portions as needed after adding.
         </p>
 
         {aiPreview.items?.length > 0 ? (
@@ -134,33 +182,26 @@ const AddFoodForm = ({
               const nutrition = item.nutrition || {};
 
               return (
-                <div
-                  className="ai-food-item"
-                  key={`${item.name}-${index}`}
-                >
-                  <div>
-                    <strong>{item.name}</strong>
-
-                    <div className="muted">
+                <div className="ai-food-item" key={`${item.name}-${index}`}>
+                  <div className="ai-item-left">
+                    <strong className="ai-item-name">{item.name}</strong>
+                    <div className="ai-item-qty">
                       {item.quantity} {item.unit}
                     </div>
                   </div>
 
                   <div className="ai-food-nutrition">
-                    <div>
-                      <strong>
-                        {Math.round(Number(nutrition.calories) || 0)} kcal
-                      </strong>
+                    <div className="ai-item-cal">
+                      <strong>{Math.round(Number(nutrition.calories) || 0)}</strong>
+                      <span> kcal</span>
                     </div>
 
-                    <div className="muted">
-                      Protein {Math.round(Number(nutrition.protein) || 0)}g
-                      {' · '}
-                      Carbs {Math.round(Number(nutrition.carbs) || 0)}g
-                      {' · '}
-                      Fat {Math.round(Number(nutrition.fat) || 0)}g
-                      {' · '}
-                      Fiber {Math.round(Number(nutrition.fiber) || 0)}g
+                    <div className="ai-item-macros">
+                      <span>P: {Math.round(Number(nutrition.protein) || 0)}g</span>
+                      <span>·</span>
+                      <span>C: {Math.round(Number(nutrition.carbs) || 0)}g</span>
+                      <span>·</span>
+                      <span>F: {Math.round(Number(nutrition.fat) || 0)}g</span>
                     </div>
                   </div>
                 </div>
@@ -169,12 +210,11 @@ const AddFoodForm = ({
           </div>
         ) : (
           <p className="muted">
-            No food items were detected. Try describing what you ate with
-            quantities.
+            No food items were detected. Try describing what you ate with quantities.
           </p>
         )}
 
-        <div className="form-actions">
+        <div className="form-actions" style={{ marginTop: '14px' }}>
           <button
             type="button"
             className="link"
@@ -188,12 +228,9 @@ const AddFoodForm = ({
             type="button"
             className="btn primary"
             onClick={onConfirmAI}
-            disabled={
-              submitting ||
-              !aiPreview.items?.length
-            }
+            disabled={submitting || !aiPreview.items?.length}
           >
-            {submitting ? 'Adding…' : 'Confirm & Add'}
+            {submitting ? 'Adding…' : 'Confirm & Add to Log'}
           </button>
         </div>
       </div>
@@ -370,6 +407,31 @@ const FoodPage = () => {
     }
   };
 
+  const handleRefreshAI = async () => {
+    const description = formDescription.trim();
+    if (!description) return;
+
+    setAiAnalyzing(true);
+    setError(null);
+
+    try {
+      const result = await foodService.analyzeFood(description, { bypassCache: true });
+      setAiPreview(result);
+    } catch (e) {
+      console.error('Refresh AI food analysis failed:', e);
+      setError(e.response?.data?.message || 'Failed to refresh from AI');
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
+
+  const [cacheNotice, setCacheNotice] = useState(null);
+  const handleClearCache = async () => {
+    await nutritionService.clearCache();
+    setCacheNotice('Nutrition cache cleared!');
+    setTimeout(() => setCacheNotice(null), 2500);
+  };
+
   const handleConfirmAI = async () => {
     if (!aiPreview?.items?.length) {
       return;
@@ -489,19 +551,44 @@ const FoodPage = () => {
       aiPreview={aiPreview}
       onConfirmAI={handleConfirmAI}
       onCancelAI={handleCancelAI}
+      onRefreshAI={handleRefreshAI}
     />
   );
 
+  const cacheStats = nutritionService.getStats();
+
   return (
     <div className="page-card food-page">
-      <p className="eyebrow">Nutrition</p>
-      <h1>Food</h1>
+      <div className="page-head">
+        <div>
+          <p className="eyebrow">Nutrition & Macros</p>
+          <h1>Food Journal</h1>
+          <div className="food-date">{displayDate}</div>
+        </div>
 
-      <div className="food-date">{displayDate}</div>
+        <div className="food-page-actions">
+          <button
+            type="button"
+            className="ghost-btn data-cache-btn"
+            onClick={handleClearCache}
+            title="Clear AI Nutrition Cache"
+          >
+            <DatabaseIcon size={13} />
+            <span>Clear Cache</span>
+          </button>
+        </div>
+      </div>
+
+      {cacheNotice && (
+        <div className="cache-notice-banner" role="status">
+          <DatabaseIcon size={14} />
+          <span>{cacheNotice} (Hits: {cacheStats.hits}, Saved API calls: {cacheStats.savedApiCalls})</span>
+        </div>
+      )}
 
       <div className="date-nav">
         <button
-          className="link"
+          className="link-subtle"
           onClick={() => navDay(-1)}
         >
           ← Previous
@@ -515,7 +602,7 @@ const FoodPage = () => {
         </button>
 
         <button
-          className="link"
+          className="link-subtle"
           onClick={() => navDay(1)}
         >
           Next →
@@ -523,7 +610,7 @@ const FoodPage = () => {
       </div>
 
       <div className="food-section">
-        <h4 className="section-title">Nutrition Summary</h4>
+        <h4 className="section-title">Daily Nutrition Summary</h4>
 
         <div className="nutrition-stats">
           {statFields.map((f) => (
@@ -552,8 +639,9 @@ const FoodPage = () => {
       )}
 
       {loading ? (
-        <div className="card">
-          Loading food log…
+        <div className="card loading-card">
+          <div className="skeleton-line" style={{ width: '120px', height: '16px', marginBottom: '8px' }} />
+          <div className="skeleton-line" style={{ height: '38px' }} />
         </div>
       ) : (
         <>
@@ -565,7 +653,7 @@ const FoodPage = () => {
                 className="add-food-cta"
                 onClick={() => openForm(null)}
               >
-                + Add Food
+                + Add Food Item
               </button>
             )}
           </div>
@@ -588,10 +676,9 @@ const FoodPage = () => {
                 >
                   <div className="meal-card-header">
                     <h3>
-                      <span aria-hidden>
-                        {m.icon}
-                      </span>{' '}
-                      {m.label}
+                      <span className="meal-tag-dot" aria-hidden="true" />
+                      <span>{m.label}</span>
+                      <span className="meal-time-tag">{m.tag}</span>
                     </h3>
 
                     {!formOpenHere && (
@@ -619,7 +706,7 @@ const FoodPage = () => {
                         <FoodEntryRow
                           key={it._id}
                           item={it}
-                          icon={m.icon}
+                          icon={<FoodIcon size={14} />}
                           editing={
                             editingItemId === it._id
                           }

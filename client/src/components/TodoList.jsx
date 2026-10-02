@@ -1,34 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as todoService from '../services/todoService';
-import { LockIcon, PlusIcon } from './Icons';
+import { LockIcon, PlusIcon, CheckIcon } from './Icons';
 
 const priorityLabel = (p) => {
-  if (p === 'low') return 'Low priority';
-  if (p === 'high') return 'High priority';
-  return 'Medium priority';
+  if (p === 'low') return 'Low';
+  if (p === 'high') return 'High';
+  return 'Normal';
 };
 
 /**
- * TodoList component.
- *
- * Props:
- *   selectedDate    – YYYY-MM-DD string for the displayed day
- *   todos           – array of todo objects
- *   loading         – boolean
- *   error           – string or null
- *   onChanged       – callback called after any mutation
- *   datePermission  – 'past' | 'today' | 'future'
+ * TodoList component with keyboard shortcuts (N to focus), skeleton loading,
+ * and satisfying task-completion micro-interactions.
  */
-const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermission = 'today' }) => {
+const TodoList = ({
+  selectedDate,
+  todos = [],
+  loading,
+  error,
+  onChanged,
+  datePermission = 'today',
+}) => {
   const [editing, setEditing] = useState(null);
   const [input, setInput] = useState('');
   const [priority, setPriority] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  const inputRef = useRef(null);
 
-  // Derived permission flags — single place to check mutability.
+  // Derived permission flags
   const canEdit = datePermission === 'today';
   const canAdd = datePermission === 'today' || datePermission === 'future';
+
+  // Keyboard shortcut: Press 'N' to focus the task input
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.tagName === 'SELECT' ||
+          activeEl.isContentEditable);
+
+      if (e.key.toLowerCase() === 'n' && !isInput && !e.metaKey && !e.ctrlKey && canAdd) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canAdd]);
 
   const addTask = async () => {
     if (!input.trim() || !canAdd) return;
@@ -96,9 +118,17 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
 
   if (loading) {
     return (
-      <div className="card todo-card">
-        <p className="muted" style={{ margin: '14px 0', textAlign: 'center' }}>Loading tasks…</p>
-      </div>
+      <section className="card todo-card" aria-label="Loading tasks">
+        <div className="skeleton-todo-header">
+          <div className="skeleton-line" style={{ width: '140px', height: '18px' }} />
+          <div className="skeleton-line" style={{ width: '80px', height: '14px' }} />
+        </div>
+        <div className="skeleton-todo-list">
+          <div className="skeleton-line" style={{ height: '42px', margin: '8px 0' }} />
+          <div className="skeleton-line" style={{ height: '42px', margin: '8px 0' }} />
+          <div className="skeleton-line" style={{ height: '42px', margin: '8px 0' }} />
+        </div>
+      </section>
     );
   }
 
@@ -110,22 +140,38 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
     <section className="card todo-card" aria-labelledby="todo-card-title">
       <div className="todo-header">
         <div>
-          <h3 id="todo-card-title">{datePermission === 'today' ? "Today's Tasks" : 'Tasks'}</h3>
+          <div className="todo-header-top">
+            <h3 id="todo-card-title">{datePermission === 'today' ? "Today's Focus" : 'Tasks'}</h3>
+            <span className="todo-count-badge">
+              {completedCount} / {todos.length}
+            </span>
+          </div>
           <div className="todo-sub">
             {datePermission === 'today'
-              ? 'Active tasks assigned to today'
+              ? `${todos.length - completedCount} pending · ${completedCount} completed`
               : `${completedCount} completed · ${todos.length - completedCount} pending`}
           </div>
         </div>
+
         <div className="todo-meta">
-          <div className="progress-text">{completedCount} of {todos.length} completed</div>
-          <div className="progress-bar" role="progressbar" aria-valuenow={progress} aria-valuemin="0" aria-valuemax="100">
+          <div className="progress-text">{progress}% complete</div>
+          <div
+            className="progress-bar"
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
             <div className="progress-fill" style={{ width: `${progress}%` }} />
           </div>
         </div>
       </div>
 
-      {formError && <div className="card error" style={{ margin: '10px 0' }} role="alert">{formError}</div>}
+      {formError && (
+        <div className="card error" style={{ margin: '10px 0' }} role="alert">
+          {formError}
+        </div>
+      )}
 
       {/* Read-only / locked banner for non-today dates */}
       {datePermission === 'past' && (
@@ -143,7 +189,7 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
         </div>
       )}
 
-      {/* Add/Edit form — rendered for adding (today/future) and editing (today) */}
+      {/* Add/Edit form */}
       {(canAdd || (editing && canEdit)) && (
         <form
           className="todo-form"
@@ -153,23 +199,37 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
             else addTask();
           }}
         >
-          <input
-            className="task-input"
-            placeholder={editing ? 'Update task title' : 'Add task to focus list'}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            aria-label="Task title"
-          />
+          <div className="task-input-wrapper">
+            <input
+              ref={inputRef}
+              className="task-input"
+              placeholder={
+                editing
+                  ? 'Update task title…'
+                  : 'Add a task to focus list… (Press N to focus)'
+              }
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              aria-label="Task title"
+            />
+            {!editing && (
+              <kbd className="input-shortcut-hint" onClick={() => inputRef.current?.focus()}>
+                N
+              </kbd>
+            )}
+          </div>
+
           <div className="form-controls">
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
               aria-label="Task priority"
+              className="priority-select"
             >
               <option value="">Priority: Normal</option>
-              <option value="low">Low priority</option>
-              <option value="medium">Medium priority</option>
-              <option value="high">High priority</option>
+              <option value="low">Priority: Low</option>
+              <option value="medium">Priority: Normal</option>
+              <option value="high">Priority: High</option>
             </select>
             {editing ? (
               <>
@@ -207,52 +267,89 @@ const TodoList = ({ selectedDate, todos, loading, error, onChanged, datePermissi
 
       <div className="todo-section">
         {todos.length === 0 ? (
-          <div className="empty-state">
-            <strong>No tasks scheduled</strong>
-            <p className="muted">
-              {datePermission === 'today'
-                ? 'Your list is clear. Add items you need to focus on today.'
-                : 'No tasks were logged for this day.'}
-            </p>
+          <div className="empty-state-editorial">
+            <svg
+              className="empty-state-icon"
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.25"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <div className="empty-state-content">
+              <span className="empty-state-headline">
+                {datePermission === 'today' ? 'Your focus list is clear' : 'No tasks recorded'}
+              </span>
+              <p className="empty-state-hint">
+                {datePermission === 'today' ? (
+                  <>
+                    Capture what matters for today. Press <kbd className="hint-kbd">N</kbd> or click the input above to begin.
+                  </>
+                ) : (
+                  'No tasks were scheduled on this calendar day.'
+                )}
+              </p>
+            </div>
           </div>
         ) : (
           <ul className="todo-list" aria-label="Task list">
             {todos.map((t) => (
               <li
                 key={t._id}
-                className={`todo-item ${t.completed ? 'completed' : ''} ${!canEdit ? 'read-only' : ''}`}
+                className={`todo-item ${t.completed ? 'completed' : ''} ${
+                  !canEdit ? 'read-only' : ''
+                } priority-${t.priority || 'medium'}`}
               >
                 <label className={`checkbox ${!canEdit ? 'checkbox-disabled' : ''}`}>
                   <input
                     type="checkbox"
-                    checked={t.completed}
+                    checked={Boolean(t.completed)}
                     onChange={() => toggleComplete(t)}
                     disabled={!canEdit}
                     aria-label={`Mark "${t.title}" as ${t.completed ? 'incomplete' : 'complete'}`}
                   />
-                  <span className="checkmark" />
+                  <span className="checkmark">
+                    {t.completed && <CheckIcon size={11} />}
+                  </span>
                 </label>
+
                 <div className="todo-content">
-                  <div className="todo-title">{t.title}</div>
-                  <div className="todo-meta-small">{priorityLabel(t.priority)}</div>
+                  <span className="todo-title">{t.title}</span>
+                  <div className="todo-meta-row">
+                    <span className={`priority-tag priority-tag-${t.priority || 'medium'}`}>
+                      {priorityLabel(t.priority)}
+                    </span>
+                    {t.completed && <span className="completed-tag">Done</span>}
+                  </div>
                 </div>
+
                 {canEdit && (
                   <div className="actions">
                     <button
                       type="button"
-                      className="link"
+                      className="link-subtle"
                       onClick={() => {
                         setEditing(t._id);
                         setInput(t.title);
                         setPriority(t.priority || '');
+                        inputRef.current?.focus();
                       }}
+                      title="Edit task"
                     >
                       Edit
                     </button>
                     <button
                       type="button"
-                      className="link danger"
+                      className="link-subtle danger"
                       onClick={() => remove(t._id)}
+                      title="Delete task"
                     >
                       Delete
                     </button>

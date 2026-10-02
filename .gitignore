@@ -7,3 +7,5 @@ client/.env
 .env
 .env.*
 !.env.example
+tools/
+screenshots/

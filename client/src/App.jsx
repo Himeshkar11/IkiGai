@@ -15,7 +15,6 @@ import NotFoundPage from './pages/NotFoundPage';
 import RoomPage from './pages/RoomPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
-import { formatStatus } from './utils/format';
 import './App.css';
 
 // Protected Route component
@@ -55,7 +54,12 @@ const AuthRoute = ({ children }) => {
 
 const AppShell = () => {
   const location = useLocation();
-  const { healthStatus } = useAppContext();
+  const {
+    healthStatus,
+    runHealthCheck,
+    toggleSidebar,
+    setCommandPaletteOpen,
+  } = useAppContext();
   const { isAuthenticated, loading } = useAuth();
 
   useHealthCheck();
@@ -93,14 +97,15 @@ const AppShell = () => {
     );
   }
 
-  const isHealthy = healthStatus?.status?.toLowerCase() === 'ok';
-  const statusText = isHealthy
-    ? `API ${formatStatus(healthStatus.status)}`
-    : `API ${formatStatus(healthStatus?.status || 'checking')}`;
+  const isApiError = Boolean(healthStatus?.isError);
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
   const getHeaderTitle = () => {
     const p = location.pathname;
-    if (p === '/' || p === '/home') return 'Today';
+    if (p === '/' || p === '/home') return 'Overview';
+    if (p === '/food') return 'Food & Nutrition';
+    if (p === '/room') return 'Room & Habits';
+    if (p === '/money') return 'Finances';
     if (p === '/privacy') return 'Privacy Policy';
     if (p === '/terms') return 'Terms & Conditions';
     return p.slice(1).replace(/-/g, ' ');
@@ -110,16 +115,58 @@ const AppShell = () => {
     <Layout>
       <header className="topbar">
         <div className="topbar-left">
-          <p className="topbar-title">{getHeaderTitle()}</p>
-        </div>
-        <div className="topbar-right">
-          <ThemeToggle />
-          <div
-            className={`status-pill ${isHealthy ? 'online' : 'offline'}`}
-            title={statusText}
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={toggleSidebar}
+            aria-label="Open navigation menu"
+            title="Open navigation menu"
           >
-            {isHealthy ? 'API • OK' : 'API • Issue'}
-          </div>
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+            <span className="hamburger-line" />
+          </button>
+          <span className="topbar-crumb-app">IkiGai</span>
+          <span className="topbar-crumb-sep">/</span>
+          <h2 className="topbar-title">{getHeaderTitle()}</h2>
+        </div>
+
+        <div className="topbar-right">
+          <button
+            type="button"
+            className="cmd-trigger-btn"
+            onClick={() => setCommandPaletteOpen(true)}
+            title="Search & Command Palette"
+            aria-label="Open Command Palette"
+          >
+            <span className="cmd-trigger-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+            </span>
+            <span className="cmd-trigger-label">Jump to…</span>
+            <kbd className="cmd-trigger-kbd">{isMac ? '⌘K' : 'Ctrl+K'}</kbd>
+          </button>
+
+          <ThemeToggle />
+
+          {isApiError && (
+            <div className="api-issue-badge" role="status">
+              <span className="api-issue-dot" aria-hidden="true" />
+              <span className="api-issue-text">
+                {healthStatus?.message || 'API connection issue'}
+              </span>
+              <button
+                type="button"
+                className="api-retry-btn"
+                onClick={runHealthCheck}
+                title="Retry connecting to API"
+              >
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       </header>
 

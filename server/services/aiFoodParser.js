@@ -1,9 +1,27 @@
+const crypto = require("crypto");
 const OpenAI = require("openai");
+const NutritionCache = require("../models/NutritionCache");
+
+const PROMPT_VERSION = "v1.0";
+const MODEL_NAME = "openai/gpt-oss-20b";
 
 const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
+  apiKey: process.env.OPENROUTER_API_KEY || "dummy-test-key",
   baseURL: "https://openrouter.ai/api/v1",
 });
+
+const PIECE_WEIGHTS_G = {
+  roti: 26,
+  rotis: 26,
+  chapati: 26,
+  chapatis: 26,
+  phulka: 26,
+  phulkas: 26,
+  idli: 40,
+  idlis: 40,
+  dosa: 80,
+  dosas: 80,
+};
 
 const PROTEIN_FOODS = [
   { name: "soy chunks", aliases: ["soy chunks", "soya chunks", "meal maker", "soy nuggets"], proteinPer100g: 52 },
@@ -22,19 +40,24 @@ const PROTEIN_FOODS = [
   { name: "besan", aliases: ["besan", "gram flour", "chickpea flour", "besan chilla"], proteinPer100g: 21 },
   { name: "peanuts", aliases: ["peanuts", "groundnuts", "moongfali"], proteinPer100g: 26 },
   { name: "roasted chana", aliases: ["roasted chana", "bhuna chana", "roasted bengal gram"], proteinPer100g: 21 },
-  { name: "wheat", aliases: ["wheat", "atta", "whole wheat"], proteinPer100g: 12 },
+  // Cooked pulses & staples (reconciled with client seed)
+  { name: "cooked dal", aliases: ["cooked dal", "yellow dal", "dal tadka", "boiled dal", "dal", "daal", "toor dal", "arhar dal"], proteinPer100g: 4.6 },
+  { name: "cooked rice", aliases: ["cooked rice", "white rice", "boiled rice", "steamed rice", "chawal"], proteinPer100g: 2.7 },
+  { name: "wheat", aliases: ["wheat", "atta", "whole wheat", "roti", "rotis", "chapati", "chapatis", "phulka", "phulkas"], proteinPer100g: 12 },
+  { name: "idli", aliases: ["idli", "idlis", "steamed idli"], proteinPer100g: 5.0 },
+  { name: "plain dosa", aliases: ["plain dosa", "dosa", "dosas", "sada dosa"], proteinPer100g: 4.0 },
   { name: "bajra", aliases: ["bajra", "pearl millet"], proteinPer100g: 12 },
   { name: "jowar", aliases: ["jowar", "sorghum"], proteinPer100g: 11 },
-  { name: "oats", aliases: ["oats", "rolled oats"], proteinPer100g: 13 },
+  { name: "oats", aliases: ["oats", "rolled oats", "oatmeal"], proteinPer100g: 13 },
   { name: "ragi", aliases: ["ragi", "finger millet"], proteinPer100g: 8 },
-  { name: "rice", aliases: ["rice", "white rice", "brown rice"], proteinPer100g: 7 },
-  { name: "paneer", aliases: ["paneer", "cottage cheese", "indian cottage cheese", "paneer tikka", "paneer butter masala", "kadai paneer", "palak paneer", "shahi paneer", "chilli paneer", "matar paneer"], proteinPer100g: 18 },
+  { name: "rice", aliases: ["rice", "brown rice", "raw rice"], proteinPer100g: 7 },
+  { name: "paneer", aliases: ["paneer", "cottage cheese", "indian cottage cheese", "paneer tikka", "paneer butter masala", "kadai paneer", "palak paneer", "shahi paneer", "chilli paneer", "matar paneer", "raw paneer"], proteinPer100g: 18 },
   { name: "low-fat paneer", aliases: ["low-fat paneer", "low fat paneer", "low-fat cottage cheese"], proteinPer100g: 21 },
   { name: "greek yogurt", aliases: ["greek yogurt", "greek yoghurt", "hung curd"], proteinPer100g: 10 },
-  { name: "curd", aliases: ["curd", "dahi", "yogurt", "yoghurt"], proteinPer100g: 4 },
-  { name: "milk", aliases: ["milk", "cow milk", "toned milk", "full-fat milk"], proteinPer100g: 3.3 },
+  { name: "curd", aliases: ["curd", "dahi", "plain curd", "plain yogurt", "yogurt", "yoghurt"], proteinPer100g: 4 },
+  { name: "milk", aliases: ["milk", "cow milk", "toned milk", "full-fat milk", "cup of milk", "glass of milk", "doodh"], proteinPer100g: 3.3 },
   { name: "skim milk", aliases: ["skim milk", "low-fat milk", "skimmed milk"], proteinPer100g: 3.4 },
-  { name: "whole egg", aliases: ["whole egg", "whole eggs", "egg", "eggs", "chicken egg", "boiled egg", "half-boiled egg", "omelette", "masala omelette", "egg bhurji", "scrambled eggs", "egg curry", "egg sandwich", "egg dosa", "egg roll", "egg fried rice", "egg toast"], proteinPerEgg: 6.5 },
+  { name: "whole egg", aliases: ["whole egg", "whole eggs", "egg", "eggs", "chicken egg", "boiled egg", "boiled eggs", "ande", "half-boiled egg", "omelette", "masala omelette", "egg bhurji", "scrambled eggs", "egg curry", "egg sandwich", "egg dosa", "egg roll", "egg fried rice", "egg toast"], proteinPerEgg: 6.5 },
   { name: "egg white", aliases: ["egg white", "egg whites"], proteinPerEgg: 3.6 },
   { name: "egg yolk", aliases: ["egg yolk", "egg yolks"], proteinPerEgg: 2.7 },
 ];
@@ -45,6 +68,20 @@ const normalizeFoodName = (name) => String(name || "")
   .replace(/[^a-z0-9\s-]/g, " ")
   .replace(/\s+/g, " ")
   .trim();
+
+const normalizeQuery = (text) => String(text || "")
+  .toLowerCase()
+  .trim()
+  .replace(/[‐‑‒–—]/g, "-")
+  .replace(/[^a-z0-9.\s-]/g, " ")
+  .replace(/\s+/g, " ");
+
+const generateCacheKey = (normalizedQuery, promptVersion = PROMPT_VERSION, model = MODEL_NAME) => {
+  return crypto
+    .createHash("sha256")
+    .update(`${promptVersion}:${model}:${normalizedQuery}`)
+    .digest("hex");
+};
 
 const findProteinFood = (name) => {
   const normalized = normalizeFoodName(name);
@@ -57,9 +94,20 @@ const findProteinFood = (name) => {
     .sort((a, b) => b.alias.length - a.alias.length)[0]?.food;
 };
 
-const quantityInGrams = (quantity, unit) => {
+const quantityInGrams = (name, quantity, unit) => {
   const conversions = { g: 1, ml: 1, cup: 240, tbsp: 15, tsp: 5, oz: 28.3495 };
-  return conversions[unit] ? quantity * conversions[unit] : null;
+  if (conversions[unit]) {
+    return quantity * conversions[unit];
+  }
+  if (unit === "piece" || unit === "slice") {
+    const normalized = normalizeFoodName(name);
+    for (const [key, weight] of Object.entries(PIECE_WEIGHTS_G)) {
+      if (normalized === key || normalized.includes(key)) {
+        return quantity * weight;
+      }
+    }
+  }
+  return null;
 };
 
 const calculateWhitelistedProtein = (name, quantity, unit) => {
@@ -70,7 +118,7 @@ const calculateWhitelistedProtein = (name, quantity, unit) => {
   }
 
   if (food.proteinPerEgg) {
-    const grams = quantityInGrams(quantity, unit);
+    const grams = quantityInGrams(name, quantity, unit);
     const eggCount = unit === "piece" ? quantity : grams === null ? 0 : grams / 50;
     return {
       supported: true,
@@ -80,7 +128,7 @@ const calculateWhitelistedProtein = (name, quantity, unit) => {
     };
   }
 
-  const grams = quantityInGrams(quantity, unit);
+  const grams = quantityInGrams(name, quantity, unit);
   if (grams === null) {
     return { supported: true, matchedFood: food.name, proteinPer100g: food.proteinPer100g, proteinG: 0 };
   }
@@ -140,6 +188,30 @@ const parseFoodText = async (text) => {
     throw new Error("Food description is required");
   }
 
+  const normalized = normalizeQuery(text);
+  const cacheKey = generateCacheKey(normalized, PROMPT_VERSION, MODEL_NAME);
+
+  // 1. Tier 2: Check MongoDB NutritionCache before calling external AI
+  try {
+    const cached = await NutritionCache.findOne({ key: cacheKey });
+    if (cached && cached.response && Array.isArray(cached.response.items)) {
+      // Asynchronously update lastUsedAt and hitCount
+      NutritionCache.updateOne(
+        { _id: cached._id },
+        { $inc: { hitCount: 1 }, $set: { lastUsedAt: new Date() } }
+      ).catch(() => {});
+
+      return {
+        items: cached.response.items,
+        source: "server-cache",
+      };
+    }
+  } catch (err) {
+    // If Mongo is not connected or in standalone test, proceed gracefully to AI
+    console.warn("[NutritionCache] Cache check skipped:", err.message);
+  }
+
+  // 2. Tier 3: Call OpenRouter
   const response = await openrouter.chat.completions.create({
     model: "openai/gpt-oss-20b",
 
@@ -251,7 +323,7 @@ The response MUST have exactly this structure:
       },
       "ingredients": [
         { "name": "egg", "quantity": 2, "unit": "piece" }
-      }
+      ]
     }
   ]
 }
@@ -374,9 +446,36 @@ The response MUST have exactly this structure:
     };
   });
 
-  return items;
+  // 3. Store only validated responses in MongoDB cache
+  try {
+    await NutritionCache.create({
+      key: cacheKey,
+      normalizedQuery: normalized,
+      response: { items },
+      promptVersion: PROMPT_VERSION,
+      model: MODEL_NAME,
+      hitCount: 1,
+      createdAt: new Date(),
+      lastUsedAt: new Date(),
+    });
+  } catch (cacheErr) {
+    console.warn("[NutritionCache] Store failed:", cacheErr.message);
+  }
+
+  return {
+    items,
+    source: "ai",
+  };
 };
 
 module.exports = {
   parseFoodText,
+  PROTEIN_FOODS,
+  PIECE_WEIGHTS_G,
+  findProteinFood,
+  calculateWhitelistedProtein,
+  normalizeFoodName,
+  normalizeQuery,
+  generateCacheKey,
+  quantityInGrams,
 };

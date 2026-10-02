@@ -54,19 +54,11 @@ export const deleteMealItem = async (logId, meal, itemId) => {
   return res.data.foodLog;
 };
 
-// AI food analysis
-export const analyzeFood = async (text) => {
-  const res = await api.post(
-    '/ai/food-parser',
-    {
-      text,
-    },
-    {
-      timeout: 60000,
-    }
-  );
+import nutritionService from './nutritionService';
 
-  return res.data;
+// AI food analysis — delegates to cached nutritionService
+export const analyzeFood = async (text, options = {}) => {
+  return await nutritionService.estimateNutrition(text, options);
 };
 
 export default {

@@ -42,6 +42,8 @@ const HomePage = () => {
   const { todos, food, room, money, streak, activityRefreshKey, refreshTodos } = useHomeDashboard(activeDate);
 
   const greet = greetingForHour(new Date().getHours());
+  const displayName = (user?.name && user.name.trim()) || (user?.email ? user.email.split('@')[0].trim() : '');
+  const greetingText = displayName ? `${greet}, ${displayName}` : greet;
   const datePermission = getDatePermission(activeDate);
   const isToday = datePermission === 'today';
   const displayDate = formatCalendarDisplay(activeDate);
@@ -57,90 +59,130 @@ const HomePage = () => {
     Number(roomStatus.clothesReady !== null && roomStatus.clothesReady !== undefined);
   const moneyCount = money.transactions.length;
 
+  const tasksContextText =
+    todoItems.length === 0
+      ? 'No tasks logged'
+      : todoCompleted === todoItems.length
+      ? 'All items done'
+      : `${todoItems.length - todoCompleted} remaining`;
+
+  const calorieGoal = 2100;
+  const calorieContextText = `${Math.round(foodTotals.calories)} / ${calorieGoal} kcal`;
+
   return (
-    <div className="page-card home-page">
-      <header className="page-head home-hero">
-        <div>
-          <h1>{greet}{user?.name ? `, ${user.name}` : ''}</h1>
-          <div className="home-hero-date">{displayDate}</div>
-          <p className="home-hero-copy">
-            {isToday ? 'Daily executive overview across all life domains.' : `Historical archive view for ${displayDate}.`}
+    <div className="home-container">
+      {/* Editorial Header */}
+      <header className="home-hero">
+        <div className="home-hero-content">
+          <div className="home-hero-meta">
+            <span className="mono-date-pill">{displayDate}</span>
+            {isToday ? (
+              <span className="active-day-tag">Today</span>
+            ) : (
+              <span className="archive-day-tag">Archive View</span>
+            )}
+          </div>
+          <h1 className="home-greeting">
+            {greetingText}
+          </h1>
+          <p className="home-hero-hint">
+            {isToday
+              ? `${tasksContextText} · Focus on high-leverage execution today.`
+              : `Reviewing record for ${displayDate}. View-only historical mode.`}
           </p>
         </div>
       </header>
 
-      <section className="overview-cards" aria-label="Domain metrics overview">
+      {/* Slim Inline Metrics Strip */}
+      <section className="metrics-strip" aria-label="Domain metrics strip">
         <button
           type="button"
-          className="overview-card"
+          className="metric-item metric-tasks"
           onClick={() => navigate('/')}
           aria-label={`Tasks: ${todoCompleted} of ${todoItems.length} completed`}
         >
-          <div className="overview-icon" aria-hidden="true">
-            <TasksIcon size={18} />
+          <div className="metric-header">
+            <TasksIcon size={14} className="metric-inline-icon" />
+            <span className="metric-label">TASKS</span>
           </div>
-          <div>
-            <div className="overview-value">
+          <div className="metric-value-row">
+            <span className="metric-number">
               {todos.loading ? '…' : `${todoCompleted} / ${todoItems.length}`}
-            </div>
-            <div className="overview-label">TASKS COMPLETED</div>
+            </span>
           </div>
+          <span className="metric-context">{tasksContextText}</span>
         </button>
+
+        <div className="metric-divider" aria-hidden="true" />
 
         <button
           type="button"
-          className="overview-card"
+          className="metric-item metric-food"
           onClick={() => navigate('/food')}
-          aria-label={`Food: ${Math.round(foodTotals.calories)} calories recorded`}
+          aria-label={`Nutrition: ${calorieContextText}`}
         >
-          <div className="overview-icon" aria-hidden="true">
-            <FoodIcon size={18} />
+          <div className="metric-header">
+            <FoodIcon size={14} className="metric-inline-icon" />
+            <span className="metric-label">NUTRITION</span>
           </div>
-          <div>
-            <div className="overview-value">
-              {food.loading ? '…' : `${Math.round(foodTotals.calories)} kcal`}
-            </div>
-            <div className="overview-label">CALORIE INTAKE</div>
+          <div className="metric-value-row">
+            <span className="metric-number">
+              {food.loading ? '…' : calorieContextText}
+            </span>
           </div>
+          <span className="metric-context">
+            {foodCount === 0 ? 'No meals logged' : `${Math.round(foodTotals.protein)}g protein`}
+          </span>
         </button>
+
+        <div className="metric-divider" aria-hidden="true" />
 
         <button
           type="button"
-          className="overview-card"
+          className="metric-item metric-room"
           onClick={() => navigate('/room')}
-          aria-label={`Room: ${roomAnswered} of 3 routines recorded`}
+          aria-label={`Habits: ${roomAnswered} of 3 completed`}
         >
-          <div className="overview-icon" aria-hidden="true">
-            <RoomIcon size={18} />
+          <div className="metric-header">
+            <RoomIcon size={14} className="metric-inline-icon" />
+            <span className="metric-label">ENVIRONMENT</span>
           </div>
-          <div>
-            <div className="overview-value">
+          <div className="metric-value-row">
+            <span className="metric-number">
               {room.loading ? '…' : `${roomAnswered} / 3`}
-            </div>
-            <div className="overview-label">SPACE CHECK-IN</div>
+            </span>
           </div>
+          <span className="metric-context">
+            {roomAnswered === 3 ? 'Routines checked' : `${3 - roomAnswered} unchecked`}
+          </span>
         </button>
+
+        <div className="metric-divider" aria-hidden="true" />
 
         <button
           type="button"
-          className="overview-card"
+          className="metric-item metric-money"
           onClick={() => navigate('/money')}
           aria-label={`Finances: ₹${money.total} logged`}
         >
-          <div className="overview-icon" aria-hidden="true">
-            <MoneyIcon size={18} />
+          <div className="metric-header">
+            <MoneyIcon size={14} className="metric-inline-icon" />
+            <span className="metric-label">SPENDING</span>
           </div>
-          <div>
-            <div className="overview-value">
+          <div className="metric-value-row">
+            <span className="metric-number">
               {money.loading ? '…' : `₹${money.total}`}
-            </div>
-            <div className="overview-label">{isToday ? "TODAY'S SPENDING" : 'DAY SPENDING'}</div>
+            </span>
           </div>
+          <span className="metric-context">
+            {moneyCount === 0 ? '₹0 recorded' : `${moneyCount} logged`}
+          </span>
         </button>
       </section>
 
-      <div className="home-grid">
-        <div className="main-col">
+      {/* Dominant Focus Area: Tasks & Heatmap */}
+      <div className="home-main-layout">
+        <div className="home-focus-column">
           <TodoList
             selectedDate={activeDate}
             todos={todoItems}
@@ -152,74 +194,124 @@ const HomePage = () => {
 
           <ActivityHeatmap streak={streak} refreshKey={activityRefreshKey} />
 
-          <section className="home-modules" aria-label="Quick domain modules">
-            <div className="card home-module">
-              <div className="home-module-head">
-                <h4>Food & Nutrition</h4>
-                <button type="button" className="link" onClick={() => navigate('/food')}>Open</button>
+          {/* Quick Domain Summary Cards */}
+          <section className="home-modules-strip" aria-label="Domain details">
+            <div className="home-domain-card domain-food-card">
+              <div className="home-domain-header">
+                <div className="domain-title-wrap">
+                  <span className="domain-dot dot-food" aria-hidden="true" />
+                  <h4>Food & Nutrition</h4>
+                </div>
+                <button type="button" className="domain-open-btn" onClick={() => navigate('/food')}>
+                  Open →
+                </button>
               </div>
+
               {food.loading ? (
-                <p className="muted">Loading nutritional log…</p>
+                <p className="muted">Loading log…</p>
               ) : food.error ? (
                 <p className="muted">{food.error}</p>
               ) : foodCount === 0 ? (
-                <div className="empty-state compact">
-                  <strong>No entries recorded</strong>
-                  <p className="muted">Nothing logged for this date yet.</p>
+                <div className="domain-empty">
+                  <span>Nothing recorded for this date.</span>
+                  <button type="button" className="link-subtle" onClick={() => navigate('/food')}>
+                    + Log food
+                  </button>
                 </div>
               ) : (
-                <div className="home-nutrition">
-                  <div><span>Calories</span><strong>{Math.round(foodTotals.calories)} kcal</strong></div>
-                  <div><span>Protein</span><strong>{Math.round(foodTotals.protein)}g</strong></div>
-                  <div><span>Carbs</span><strong>{Math.round(foodTotals.carbs)}g</strong></div>
-                  <div><span>Fat</span><strong>{Math.round(foodTotals.fat)}g</strong></div>
-                  <div><span>Fiber</span><strong>{Math.round(foodTotals.fiber)}g</strong></div>
+                <div className="home-nutrition-grid">
+                  <div className="nutrition-cell">
+                    <span className="nutri-label">Calories</span>
+                    <strong className="nutri-val">{Math.round(foodTotals.calories)} kcal</strong>
+                  </div>
+                  <div className="nutrition-cell">
+                    <span className="nutri-label">Protein</span>
+                    <strong className="nutri-val">{Math.round(foodTotals.protein)}g</strong>
+                  </div>
+                  <div className="nutrition-cell">
+                    <span className="nutri-label">Carbs</span>
+                    <strong className="nutri-val">{Math.round(foodTotals.carbs)}g</strong>
+                  </div>
+                  <div className="nutrition-cell">
+                    <span className="nutri-label">Fat</span>
+                    <strong className="nutri-val">{Math.round(foodTotals.fat)}g</strong>
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="card home-module">
-              <div className="home-module-head">
-                <h4>Room & Environment</h4>
-                <button type="button" className="link" onClick={() => navigate('/room')}>Open</button>
+            <div className="home-domain-card domain-room-card">
+              <div className="home-domain-header">
+                <div className="domain-title-wrap">
+                  <span className="domain-dot dot-room" aria-hidden="true" />
+                  <h4>Room & Habits</h4>
+                </div>
+                <button type="button" className="domain-open-btn" onClick={() => navigate('/room')}>
+                  Open →
+                </button>
               </div>
+
               {room.loading ? (
-                <p className="muted">Loading space status…</p>
+                <p className="muted">Loading status…</p>
               ) : room.error ? (
                 <p className="muted">{room.error}</p>
               ) : roomAnswered === 0 ? (
-                <div className="empty-state compact">
-                  <strong>Check-in incomplete</strong>
-                  <p className="muted">Drinking water, room tidiness, and laundry not yet recorded.</p>
+                <div className="domain-empty">
+                  <span>Check-in incomplete.</span>
+                  <button type="button" className="link-subtle" onClick={() => navigate('/room')}>
+                    Check in →
+                  </button>
                 </div>
               ) : (
-                <ul className="home-status-list">
-                  <li><span>Water</span><strong>{statusText(roomStatus.waterAvailable, 'Available', 'Unavailable')}</strong></li>
-                  <li><span>Room</span><strong>{statusText(roomStatus.roomClean, 'Clean', 'Needs attention')}</strong></li>
-                  <li><span>Clothes</span><strong>{statusText(roomStatus.clothesReady, 'Ready', 'Not ready')}</strong></li>
-                  <li><span>Check-in</span><strong>{roomAnswered} / 3 answered</strong></li>
+                <ul className="domain-status-list">
+                  <li>
+                    <span>Water</span>
+                    <strong>{statusText(roomStatus.waterAvailable, 'Available', 'Unavailable')}</strong>
+                  </li>
+                  <li>
+                    <span>Room</span>
+                    <strong>{statusText(roomStatus.roomClean, 'Clean', 'Attention')}</strong>
+                  </li>
+                  <li>
+                    <span>Laundry</span>
+                    <strong>{statusText(roomStatus.clothesReady, 'Ready', 'Pending')}</strong>
+                  </li>
                 </ul>
               )}
             </div>
 
-            <div className="card home-module">
-              <div className="home-module-head">
-                <h4>Finances & Spending</h4>
-                <button type="button" className="link" onClick={() => navigate('/money')}>Open</button>
+            <div className="home-domain-card domain-money-card">
+              <div className="home-domain-header">
+                <div className="domain-title-wrap">
+                  <span className="domain-dot dot-money" aria-hidden="true" />
+                  <h4>Finances</h4>
+                </div>
+                <button type="button" className="domain-open-btn" onClick={() => navigate('/money')}>
+                  Open →
+                </button>
               </div>
+
               {money.loading ? (
-                <p className="muted">Loading spending…</p>
+                <p className="muted">Loading…</p>
               ) : money.error ? (
                 <p className="muted">{money.error}</p>
               ) : moneyCount === 0 ? (
-                <div className="empty-state compact">
-                  <strong>No transactions</strong>
-                  <p className="muted">No expenses recorded for this date.</p>
+                <div className="domain-empty">
+                  <span>No expenses logged today.</span>
+                  <button type="button" className="link-subtle" onClick={() => navigate('/money')}>
+                    + Log expense
+                  </button>
                 </div>
               ) : (
-                <ul className="home-status-list">
-                  <li><span>Total Logged</span><strong>₹{money.total}</strong></li>
-                  <li><span>Transactions</span><strong>{moneyCount}</strong></li>
+                <ul className="domain-status-list">
+                  <li>
+                    <span>Total Logged</span>
+                    <strong>₹{money.total}</strong>
+                  </li>
+                  <li>
+                    <span>Transactions</span>
+                    <strong>{moneyCount}</strong>
+                  </li>
                 </ul>
               )}
             </div>
